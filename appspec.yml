@@ -1,0 +1,17 @@
+version: 0.0
+os: linux
+files:
+  - source: /
+    destination: /var/www/source-code/engage-web/
+    overwrite: true
+file_exists_behavior: OVERWRITE
+
+hooks:
+  AfterInstall:
+    - location: scripts/build-pre
+      timeout: 300
+      runas: ubuntu
+  ApplicationStart:
+    - location: scripts/build-code
+      timeout: 600
+      runas: ubuntu
