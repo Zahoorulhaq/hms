@@ -1,0 +1,18 @@
+<svg width="10" height="8" viewBox="0 0 10 8" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <filter id="colorFilter">
+    <feComponentTransfer>
+      <feFuncR type="linear" slope="1.8" />
+      <feFuncG type="linear" slope="1.8" />
+      <feFuncB type="linear" slope="1.8" />
+    </feComponentTransfer>
+    <feColorMatrix type="matrix" values="1.3 0 0 0 0  0 1.3 0 0 0  0 0 1.3 0 0  0 0 0 1 0" />
+    <feColorMatrix type="saturate" values="0.1" />
+    <feColorMatrix type="hueRotate" values="80" />
+  </filter>
+
+  <path fill-rule="evenodd" clip-rule="evenodd" d="M1.00379 4.08643C0.448696 4.08643 0 4.53512 0 5.09022V6.99642C0 7.55152 0.448696 8.00022 1.00379 8.00022C1.55889 8.00022 2.00759 7.55152 2.00759 6.99642V5.09022C2.00759 4.53512 1.55889 4.08643 1.00379 4.08643Z" fill="#00AE8E" filter="url(#colorFilter)" />
+
+  <path fill-rule="evenodd" clip-rule="evenodd" d="M4.60731 2.32959C4.05221 2.32959 3.60352 2.77829 3.60352 3.33336V6.99621C3.60352 7.5513 4.05221 8 4.60731 8C5.16241 8 5.6111 7.5513 5.6111 6.99621V3.33336C5.6111 2.77829 5.16241 2.32959 4.60731 2.32959Z" fill="#00AE8E" filter="url(#colorFilter)" />
+
+  <path fill-rule="evenodd" clip-rule="evenodd" d="M8.20887 0C7.65377 0 7.20508 0.448696 7.20508 1.00379V6.99643C7.20508 7.55053 7.65377 8.00023 8.20887 8.00023C8.76397 8.00023 9.21267 7.55053 9.21267 6.99643V1.00379C9.21267 0.448696 8.76397 0 8.20887 0Z" fill="#00AE8E" filter="url(#colorFilter)" />
+</svg>

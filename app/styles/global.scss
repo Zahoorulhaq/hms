@@ -1,0 +1,67 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
+.container-n {
+    max-width: 2900px;
+    margin: 0 auto;
+}
+
+p {
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+body {
+    font-family: 'Poppins', sans-serif;
+}
+
+ul {
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+.vh-20 {
+    height: 20vh;
+}
+
+.owner-source {
+    border-radius: 4px;
+    background: #f8f9fc;
+    display: flex;
+    padding: 2px 8px;
+    align-items: center;
+    gap: 4px;
+    span {
+        overflow: hidden;
+        color: #949494;
+        font-family: Poppins;
+        font-size: 11px;
+        font-style: normal;
+        line-height: normal;
+    }
+}
+
+.search-field-common::placeholder,
+.dropdown-filter .ant-select-selection-placeholder,
+.search-field-customer,
+.filter-col input::placeholder,
+.filter-col-lg input::placeholder,
+.filter-col button::placeholder,
+.filter-col-lg button::placeholder,
+.custom-dropdown>button,
+.filter-col>button,
+.filter-col-lg>button {
+    font-weight: 400 !important;
+    color: #212529 !important;
+    font-size: 14px !important;
+}
+
+.search-field-common {
+    border-color: #EBEBEB !important;
+    border-radius: 4px !important;
+}
+
+@import 'helpers/variables.scss';
+@import 'common/common.styles.scss';
+@import '~bootstrap/scss/bootstrap.scss';
+@import 'common/card.component.scss';
+@import 'partials/auth.page.scss';
+@import '~bootstrap-icons/font/bootstrap-icons.css';

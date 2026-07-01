@@ -1,0 +1,12 @@
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Outer circle -->
+  <circle cx="12" cy="12" r="10" stroke="#8C9BAB" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Vertical ellipse (longitude) -->
+  <ellipse cx="12" cy="12" rx="4" ry="10" stroke="#8C9BAB" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Horizontal line (equator) -->
+  <line x1="2" y1="12" x2="22" y2="12" stroke="#8C9BAB" stroke-width="1.5" stroke-linecap="round"/>
+  <!-- Upper latitude arc -->
+  <path d="M4.5 7.5 Q12 9 19.5 7.5" stroke="#A8B5C1" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+  <!-- Lower latitude arc -->
+  <path d="M4.5 16.5 Q12 15 19.5 16.5" stroke="#A8B5C1" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+</svg>
