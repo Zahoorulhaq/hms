@@ -7,6 +7,7 @@ import {
   MdDashboard,
   MdBookOnline,
   MdReceiptLong,
+  MdOutlineBedroomParent,
 } from 'react-icons/md';
 
 interface NavItem {
@@ -19,6 +20,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Dashboard', href: '/',          icon: <MdDashboard size={20} /> },
   { label: 'Bookings',  href: '/bookings',  icon: <MdBookOnline size={20} /> },
   { label: 'Expenses',  href: '/expenses',  icon: <MdReceiptLong size={20} /> },
+  { label: 'Rooms',  href: '/rooms',  icon: <MdOutlineBedroomParent size={20} /> },
 ];
 
 interface SidebarProps {
