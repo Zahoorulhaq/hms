@@ -1,0 +1,79 @@
+#!/bin/bash
+
+echo "Environment: $DEPLOYMENT_GROUP_NAME"
+
+if [ "$DEPLOYMENT_GROUP_NAME" == "engage-web-prod-dg" ]
+then
+   echo "Running production commands"
+  # Run production commands here
+  sudo chown -R ubuntu:www-data /var/www/engage-web.bhomes.com/
+  cd /var/www/engage-web.bhomes.com
+
+elif [ "$DEPLOYMENT_GROUP_NAME" == "engage-web-stable-dg" ]
+then
+   echo "Running stable commands"
+  # Run stable commands here
+  sudo chown -R ubuntu:www-data /var/www/engage-web-beta.bhomes.com/
+  cd /var/www/engage-web-beta.bhomes.com
+  
+else
+  echo "Running staging commands"
+  # Run staging commands here
+  sudo chown -R ubuntu:www-data /var/www/engage-web.cencorpcms.net/
+  cd /var/www/engage-web.cencorpcms.net
+fi
+
+rm -rf .next 
+
+# Run npm install
+npm install
+
+#Check the exit status of the previous command
+if [ $? -ne 0 ]; then
+    echo "npm install faild, stopping script"
+    exit 1
+fi
+
+# Run npm run build
+npm run build
+
+# Check the exit status of the npm run build command
+if [ $? -ne 0 ]; then
+    echo "npm run build faild, stopping script"
+    exit 1
+fi
+
+
+if [ "$DEPLOYMENT_GROUP_NAME" == "engage-web-prod-dg" ]
+then
+   echo "Running production commands"
+  # Run production commands here
+  rsync -rv --checksum --delete /var/www/engage-web.cencorpcms.net/.next/ /var/www/engage-web.cencorpcms.net/.next_temp/
+  mv .next_live .next_old && mv .next_temp .next_live
+  pm2 start ecosystem.config.js --only production-bhomes-engage-web
+elif [ "$DEPLOYMENT_GROUP_NAME" == "engage-web-stable-dg" ]
+then
+   echo "Running stable commands"
+  # Run stable commands here
+  rsync -rv --checksum --delete /var/www/engage-web.cencorpcms.net/.next/ /var/www/engage-web.cencorpcms.net/.next_temp/
+  mv .next_live .next_old && mv .next_temp .next_live
+  pm2 start ecosystem.config.js --only beta-bhomes-engage-web
+else
+  echo "Running staging commands"
+  # Run staging commands here
+  rsync -rv --checksum --delete /var/www/engage-web.cencorpcms.net/.next/ /var/www/engage-web.cencorpcms.net/.next_temp/
+  mv .next_live .next_old && mv .next_temp .next_live
+  
+  if pm2 list | grep -q "engage-web"; then
+       # Process exists, so reload it
+       echo "Reloading engage-web process"
+       PORT=3001 pm2 reload engage-web
+   else
+       # Process doesn't exist, so start it
+       echo "Starting engage-web process"
+       PORT=3001 pm2 start npm --name "engage-web" -- start
+   fi
+  
+  sudo rm -rf .next_old
+   
+fi

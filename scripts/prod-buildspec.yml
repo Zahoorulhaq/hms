@@ -1,0 +1,48 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      nodejs: 22.8.0
+    commands:
+      # Install the AWS CLI
+      - sudo sed -i 's|http://archive.ubuntu.com|https://archive.ubuntu.com|g' /etc/apt/sources.list
+      - apt-get update && apt-get install -y awscli jq
+
+  pre_build:
+    commands:
+      - node --version
+      - echo "Code Build environment is $ENV"
+
+      # Download the environment variables from AWS Secrets Manager
+      - echo "Fetching production environment variables..."
+      - aws secretsmanager get-secret-value --secret-id engage-app/production/env --query SecretString --output text --region me-central-1 | jq -r 'to_entries|map("\(.key)=\(.value|tostring)")|.[]' > .env
+      - echo ".env file for production created successfully."
+    
+  build:
+    commands:
+      # Installing Next Dependencies
+      - npm install
+
+      # Building Next Application
+      - npm run build
+      
+
+  post_build:
+    commands:
+      # Optionally, echo out the contents of the .env file for debugging purposes
+      - rm -rf node_modules
+      - rm -rf src
+
+artifacts:
+  files:
+    - '.next/**/*'
+    - 'public/**/*'
+    - 'package.json'
+    - 'package-lock.json'
+    - 'next.config.js'
+    - 'ecosystem.config.js'    # Optional if using PM2
+    - 'appspec.yml'       # Include the appspec.yml for CodeDeploy lifecycle events
+    - 'scripts/**/*'      # Include all scripts in the scripts directory for lifecycle events
+  name: app-prod
+  base-directory: .

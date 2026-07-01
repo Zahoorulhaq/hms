@@ -1,0 +1,78 @@
+#!/bin/bash
+
+echo "Environment: '$DEPLOYMENT_GROUP_NAME'"
+
+# Trimming whitespace from DEPLOYMENT_GROUP_NAME
+DEPLOYMENT_GROUP_NAME=$(echo "$DEPLOYMENT_GROUP_NAME" | xargs)
+
+# Function to check disk space
+check_disk_space() {
+    local path="$1"
+    local min_space_gb="$2"
+    
+    # Get available space in GB
+    local available_space=$(df "$path" | awk 'NR==2 {printf "%.2f", $4/1024/1024}')
+    local total_space=$(df "$path" | awk 'NR==2 {printf "%.2f", $2/1024/1024}')
+    local used_space=$(df "$path" | awk 'NR==2 {printf "%.2f", $3/1024/1024}')
+    local usage_percent=$(df "$path" | awk 'NR==2 {printf "%.1f", ($3/$2) * 100}')
+    
+    echo "Disk space check for $path:"
+    echo "  Total: ${total_space}GB"
+    echo "  Used: ${used_space}GB (${usage_percent}%)"
+    echo "  Available: ${available_space}GB"
+    echo "  Required: ${min_space_gb}GB"
+    
+    # Compare available space with minimum requirement
+    if (( $(echo "$available_space < $min_space_gb" | bc -l) )); then
+        echo "ERROR: Insufficient disk space!"
+        echo "Available: ${available_space}GB, Required: ${min_space_gb}GB"
+        echo "Please free up disk space before deployment."
+        return 1
+    else
+        echo "✓ Sufficient disk space available."
+        return 0
+    fi
+}
+
+# Pre-deployment disk space verification
+echo "=== Pre-deployment Storage Verification ==="
+
+# Check root filesystem (for general system operations)
+echo "Checking root filesystem..."
+if ! check_disk_space "/" "2.0"; then
+    echo "Root filesystem has insufficient space. Aborting deployment."
+    exit 1
+fi
+
+# Check /var/www filesystem (where applications are deployed)
+echo "Checking /var/www filesystem..."
+if ! check_disk_space "/var/www" "5.0"; then
+    echo "/var/www filesystem has insufficient space. Aborting deployment."
+    exit 1
+fi
+
+# Check source code directory
+echo "Checking source code directory..."
+if ! check_disk_space "/var/www/source-code" "1.0"; then
+    echo "Source code directory has insufficient space. Aborting deployment."
+    exit 1
+fi
+
+echo "=== Storage verification completed successfully ==="
+echo ""
+
+if [ "$DEPLOYMENT_GROUP_NAME" == "engage-web-prod" ]; then
+    echo "Running production commands"
+    sudo rsync -r --checksum --delete --exclude='.next_live' --exclude='.env' /var/www/source-code/engage-web/ /var/www/app.engageplatform.ai/
+    echo "Complete production code syncing"
+
+elif [ "$DEPLOYMENT_GROUP_NAME" == "engage-web-stable-dg" ]; then
+    echo "Running stable commands"
+    sudo rsync -r --checksum --delete --exclude='.next_live' --exclude='.env' /var/www/source-code/engage-web/ /var/www/app-beta.engageplatform.ai/
+    echo "Complete stable code syncing"
+
+else
+    echo "Running staging commands"
+    sudo rsync -r --checksum --delete --exclude='.next_live' --exclude='.env' /var/www/source-code/engage-web/ /var/www/engage-web.cencorpcms.net/
+    echo "Complete staging code syncing"
+fi

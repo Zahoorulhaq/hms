@@ -1,0 +1,6 @@
+export const ACTIVE_URLS = {
+  ACTIVE_WEB_URL: process.env.NEXT_PUBLIC_ACTIVE_WEB_URL,
+  ACTIVE_API_URL: process.env.NEXT_PUBLIC_ACTIVE_API_URL,
+
+};
+

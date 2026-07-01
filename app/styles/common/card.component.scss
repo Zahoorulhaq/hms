@@ -1,0 +1,26 @@
+.card-title {
+    color: $numeral-800 !important;
+    font-size: $heading-5-font-size !important;
+    font-weight: $heading-5-font-weigth !important;
+    font-style: normal;
+    line-height: normal;
+}
+.card-sub-title {
+    color: $numeral-300 !important;
+    font-size: $body-2-font-size;
+    font-style: normal;
+    font-weight: $body-2-font-weight;
+    line-height: normal;
+}
+.card-design {
+  border-radius: 6px !important;
+  border: 1px solid $border-color !important;
+}
+
+img, .next-image {
+  cursor: pointer;
+}
+.custom-vr {
+  width: 0.125rem;        
+  height: 1.125rem;      
+}

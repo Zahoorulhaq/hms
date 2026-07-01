@@ -1,0 +1,66 @@
+//{
+//  "extends": [
+//    "next/core-web-vitals",
+//    "eslint:recommended",
+//    "eslint-config-next",
+//    "plugin:react/recommended",
+//    "plugin:react-hooks/recommended",
+//    // "prettier",
+//    "next"
+//  ],
+//  "plugins": ["react", "react-hooks", "simple-import-sort", "unused-imports"],
+//  "rules": {
+//    "react/no-unescaped-entities": "off",
+//    "@next/next/no-page-custom-font": "off",
+//    "indent": "off",
+//    "padding-line-between-statements": [
+//      "error",
+//      { "blankLine": "always", "prev": "*", "next": "return" }
+//    ],
+//    "quotes": ["error", "double"],
+//    "semi": ["error", "always"],
+//    "linebreak-style": 0,
+//    "react/prop-types": 0,
+//    "unused-imports/no-unused-imports": "error",
+//    "unused-imports/no-unused-vars": ["error", { "argsIgnorePattern": "^_" }],
+//    "simple-import-sort/imports": "error",
+//    "simple-import-sort/exports": "error"
+//  },
+//  "overrides": [
+//    {
+//      "files": ["**/*.ts", "**/*.tsx"],
+//      "rules": {
+//        "simple-import-sort/imports": [
+//          "error",
+//          {
+//            "groups": [
+//              // Packages `react` related packages come first.
+//              ["^react", "^next?\\w", "@reduxjs/toolkit"],
+//              // Internal packages
+//              ["^@\\styles"],
+//              ["^@?\\w"],
+//
+//              // Side effect imports.
+//              ["^\\u0000"],
+//              // Parent imports. Put `..` last.
+//              ["^\\.\\.(?!/?$)", "^\\.\\./?$"],
+//              // Other relative imports. Put same-folder imports and `.` last.
+//              ["^\\./(?=.*/)(?!/?$)", "^\\.(?!/?$)", "^\\./?$"],
+//              // Style imports.
+//              ["^.+\\.?(css)$"]
+//            ]
+//          }
+//        ]
+//      }
+//    }
+//  ]
+//}
+
+{
+  "extends": "next",
+  "rules": {
+    "react/no-unescaped-entities": "off",
+    "@next/next/no-page-custom-font": "off",
+    "@next/next/no-img-element": "off"
+  }
+}

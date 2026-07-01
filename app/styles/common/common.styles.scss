@@ -1,0 +1,112 @@
+.general-border {
+    border: 1px solid var(--border-color) !important;
+}
+
+.general-box-shadow {
+    box-shadow: var(--shadow-sm) !important;
+}
+
+.f-12-500 {
+    font-size: $body-1-font-size !important; //12
+    font-weight: $label-font-weight !important; //500
+}
+
+.f-12-600 {
+    font-size: $body-1-font-size !important; //12
+    font-weight: 600 !important; //600
+}
+
+.text-muted {
+    color: var(--text-muted) !important;
+}
+
+.f-24-700 {
+    font-size: $common-large-font !important;
+    font-weight: $heading-font-weight !important;
+}
+
+.text-main {
+    color: var(--primary) !important;
+}
+
+.text-success {
+    color: var(--success) !important;
+}
+
+.text-danger {
+    color: var(--danger) !important;
+}
+
+.background-success {
+    background-color: var(--success-bg) !important;
+}
+
+.background-danger {
+    background: #ffebee !important;
+}
+
+.background-primary {
+    background: var(--primary) !important;
+}
+
+
+/* react-datepicker theme overrides */
+
+.react-datepicker {
+    border: 1px solid var(--border-color) !important;
+    border-radius: 8px !important;
+    font-family: inherit !important;
+    font-size: 0.8rem !important;
+    box-shadow: none !important;
+}
+
+.react-datepicker__header {
+    background: var(--primary-bg) !important;
+    border-bottom: 1px solid var(--border-color) !important;
+}
+
+.react-datepicker__current-month {
+    color: var(--text-main) !important;
+    font-size: 0.82rem !important;
+}
+
+.react-datepicker__day--selected,
+.react-datepicker__day--range-start,
+.react-datepicker__day--range-end {
+    background: var(--primary) !important;
+    border-radius: 50% !important;
+}
+
+.react-datepicker__day--in-range {
+    background: var(--primary-muted) !important;
+    color: var(--primary-dark) !important;
+}
+
+.react-datepicker__day:hover {
+    background: var(--primary-light) !important;
+    color: #fff !important;
+    border-radius: 50% !important;
+}
+
+.react-datepicker__navigation-icon::before {
+    border-color: var(--primary) !important;
+}
+
+::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+    /* horizontal scrollbar height */
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--primary-muted);
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--primary-light);
+}

@@ -1,0 +1,31 @@
+{
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit"
+  },
+  "editor.lineHeight": 30,
+  "editor.snippetSuggestions": "bottom",
+  "editor.fontSize": 19,
+  "editor.formatOnSave": true,
+  "[typescriptreact]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[typescript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[json]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+
+  "files.associations": {
+    "*.tsx": "typescriptreact"
+  },
+
+  "workbench.iconTheme": "material-icon-theme",
+  "editor.inlineSuggest.enabled": false,
+
+  "javascript.updateImportsOnFileMove.enabled": "always",
+  "typescript.updateImportsOnFileMove.enabled": "always",
+
+  "auto-rename-tag.activationOnLanguage": ["html", "javascript", "typescript"],
+  "liveServer.settings.port": 5501
+}

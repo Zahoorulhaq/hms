@@ -1,0 +1,117 @@
+#!/bin/bash
+
+export NVM_DIR="$HOME/.nvm"
+export NVM_DIR="$NVM_DIR" >> ~/.bashrc 
+export NVM_DIR="$NVM_DIR" >> ~/.bash_profile
+. "$NVM_DIR/nvm.sh"
+
+node --version
+
+# Trimming whitespace from DEPLOYMENT_GROUP_NAME
+DEPLOYMENT_GROUP_NAME=$(echo "$DEPLOYMENT_GROUP_NAME" | xargs)
+
+# Define environment-specific paths, PM2 process names, and ports
+if [ "$DEPLOYMENT_GROUP_NAME" == "engage-web-prod" ]; then
+   echo "Running production commands"
+   APP_PATH="/var/www/app.engageplatform.ai"
+   PM2_PROCESS="engage-web-prod"
+   PORT=3001
+elif [ "$DEPLOYMENT_GROUP_NAME" == "engage-web-stable-dg" ]; then
+   echo "Running stable commands"
+   APP_PATH="/var/www/app-beta.engageplatform.ai"
+   PM2_PROCESS="engage-web-stable"
+   PORT=3002
+else
+   echo "Running staging commands"
+   APP_PATH="/var/www/engage-web.cencorpcms.net"
+   PM2_PROCESS="engage-web-staging"
+   PORT=3003
+fi
+
+# Change ownership and navigate to app path
+sudo chown -R ubuntu:www-data "$APP_PATH"
+cd "$APP_PATH" || exit 1
+
+# Backup existing .env files before downloading fresh ones
+echo "Backing up existing .env files in $APP_PATH..."
+if [ -f ".env" ]; then
+    sudo cp .env .env.backup
+    echo "Backup created: .env.backup"
+fi
+if [ -f ".env.local" ]; then
+    sudo cp .env.local .env.local.backup
+    echo "Backup created: .env.local.backup"
+fi
+
+# Download fresh .env file from AWS Secrets Manager
+echo "Downloading fresh .env file to $APP_PATH..."
+if [ "$DEPLOYMENT_GROUP_NAME" == "engage-web-prod" ]; then
+    echo "Fetching production environment variables..."
+    aws secretsmanager get-secret-value --secret-id engage-app/production/env --query SecretString --output text --region me-central-1 | jq -r 'to_entries|map("\(.key)=\(.value|tostring)")|.[]' > .env.new
+elif [ "$DEPLOYMENT_GROUP_NAME" == "engage-web-stable-dg" ]; then
+    echo "Fetching stable environment variables..."
+    aws secretsmanager get-secret-value --secret-id engage-app/stable/env --query SecretString --output text --region me-central-1 | jq -r 'to_entries|map("\(.key)=\(.value|tostring)")|.[]' > .env.new
+else
+    echo "Fetching staging environment variables..."
+    aws secretsmanager get-secret-value --secret-id engage-app/staging/env --query SecretString --output text --region me-central-1 | jq -r 'to_entries|map("\(.key)=\(.value|tostring)")|.[]' > .env.new
+fi
+
+# Verify new .env file was downloaded successfully
+if [ -f ".env.new" ] && [ -s ".env.new" ]; then
+    echo "New .env file downloaded successfully. Contains $(wc -l < .env.new) variables."
+    # Replace the old .env with the new one
+    sudo mv .env.new .env
+    echo ".env file updated successfully in $APP_PATH."
+    
+    # Clean up backup files since new file is working
+    echo "Cleaning up backup files..."
+    sudo rm -f .env.backup .env.local.backup .env.production .env.staging .env.development
+    echo "Backup files cleaned up."
+else
+    echo "Error: Failed to download new .env file or file is empty."
+    
+    # Restore from backup if it exists
+    if [ -f ".env.backup" ]; then
+        echo "Restoring from backup..."
+        sudo mv .env.backup .env
+        echo "Previous .env file restored. Continuing with existing environment variables."
+    else
+        echo "No backup available. Deployment will fail without environment variables."
+        exit 1
+    fi
+fi
+
+# Run npm install
+npm install
+if [ $? -ne 0 ]; then
+    echo "npm install failed, stopping script"
+    exit 1
+fi
+
+
+# Synchronize build files and manage live directories
+rsync -rv --checksum --delete "$APP_PATH/.next/" "$APP_PATH/.next_temp/"
+mv .next_live .next_old && mv .next_temp .next_live
+
+# Function to manage PM2 process: reload if running, start if not
+manage_pm2_process() {
+    local process_name="$1"
+    local port="$2"
+
+    # Check if process exists in the list of running processes
+    if pm2 list | grep -q "$process_name"; then
+        echo "Reloading $process_name on port $port"
+        PORT=$port pm2 reload "$process_name"
+    else
+        echo "Starting $process_name on port $port"
+        PORT=$port pm2 start npm --name "$process_name" -- start
+    fi
+}
+
+# Call PM2 management function (ensure it targets only the current process)
+manage_pm2_process "$PM2_PROCESS" "$PORT"
+
+# Clean up old .next directory for all environments
+sudo rm -rf .next_old
+
+sudo rm -rf /var/www/source-code/engage-web/*
