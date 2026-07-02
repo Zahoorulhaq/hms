@@ -53,13 +53,13 @@ export default function DashboardPage() {
           alignItems: 'start',
         }}>
         <BookingsChart data={data??[]} year={year} setYear={setYear} />
-        <StatCard
+        {/* <StatCard
           title="Total Bookings"
           value={totalBookings}
           subtitle="All time bookings"
           icon={<MdHotel size={24} />}
           color="var(--primary-light)"
-        />
+        /> */}
       </div>
     </div>
   );
