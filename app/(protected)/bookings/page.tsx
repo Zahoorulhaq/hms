@@ -150,7 +150,7 @@ export default function BookingsPage() {
         enableSorting: true,
         cell: (i) => (
           <>
-          {i.getValue()?.map(e=>(<span key={e.id} className="f-12-500 text-main ms-1 rounded-2 general-border px-2 py-1">{e.room_number}</span>))}
+          {i.getValue()?.map(e=>(<span key={e.id} className="f-12-500 text-main ms-1 rounded-2 general-border px-2">{e.room_number}</span>))}
           </>
         ),
       },
