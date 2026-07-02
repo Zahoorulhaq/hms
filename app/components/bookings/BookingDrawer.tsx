@@ -521,7 +521,7 @@ const mutation = useMutation({
                 border: '1px dashed var(--primary)',
                 borderRadius: 6,
               }}>
-              <MdAdd size={15} /> {mutation.isPending ? 'Saving…' : isEdit ? 'Update Booking' : 'Save Booking'}
+              <MdAdd size={15} /> 'Add room'
             </button>
 
             {/* ── Other Charges ─────────────────────────────────── */}
@@ -631,7 +631,7 @@ const mutation = useMutation({
               border: 'none',
               opacity: isSubmitting || mutation.isPending ? 0.7 : 1,
             }}>
-            {mutation.isPending ? 'Saving…' : 'Save Booking'}
+            {mutation.isPending ? 'Saving…' : isEdit ? 'Update Booking' : 'Save Booking'}
           </button>
         </div>
       </div>

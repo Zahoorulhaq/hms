@@ -112,9 +112,9 @@ export default function RoomsPage() {
       },
       {
         accessorKey: 'capacity',
-        header: 'Capacity',
+        header: 'Beds',
         enableSorting: false,
-        cell: (i) => <span className="f-12-500 text-muted">{i.getValue()} guests</span>,
+        cell: (i) => <span className="f-12-500 text-muted">{i.getValue()}</span>,
       },
       {
         accessorKey: 'price_per_night',
