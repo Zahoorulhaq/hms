@@ -145,6 +145,16 @@ export default function BookingsPage() {
         cell: (i) => <span className="f-12-500 text-capitalize text-muted">{i.getValue()}</span>,
       },
       {
+        accessorKey: 'rooms',
+        header: 'Rooms',
+        enableSorting: true,
+        cell: (i) => (
+          <>
+          {i.getValue()?.map(e=>(<span key={e.id} className="f-12-500 text-main ms-1 rounded-2 general-border px-2 py-1">{e.room_number}</span>))}
+          </>
+        ),
+      },
+      {
         accessorKey: 'check_in',
         header: 'Check In',
         enableSorting: true,
