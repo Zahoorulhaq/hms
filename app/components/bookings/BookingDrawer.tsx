@@ -8,6 +8,8 @@ import { AddBooking } from '@/server/apis/bookings';
 import { Toast } from '../Toast';
 import { GetRooms } from '@/server/apis/rooms';
 import Dropdown, { DropdownItem, DropdownSection } from '../ui/Dropdown';
+import { BOOKINGS } from '@/server/endpoints';
+import { PATCH_REQUEST, POST_REQUEST, PUT_REQUEST } from '@/server/https';
 
 // ── Types ─────────────────────────────────────────────────────────
 interface RoomRow {
@@ -23,7 +25,29 @@ interface OtherCharge {
   name: string;
   amount: number;
 }
-
+interface Booking {
+  id: number;
+  guest_name: string;
+  guest_father_name: string;
+  guest_nic: string;
+  guest_phone: string;
+  guest_profession: string;
+  guest_purpose: string;
+  guest_city: string;
+  guest_address: string;
+  guest_country: string;
+  visitor_type: string;
+  check_in: string;
+  check_out: string;
+  adults: number;
+  children: number;
+  status: string;
+  rooms_snapshot: { room_number: string; amount: number }[];
+  other_charges: { name: string; amount: number }[];
+  discount: number;
+  amount_paid: number;
+  notes: string;
+}
 interface BookingForm {
   guest_name: string;
   guest_father_name: string;
@@ -52,6 +76,7 @@ interface Props {
   open: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  booking: Booking | null;
 }
 
 function Section({ title }: { title: string }) {
@@ -85,7 +110,7 @@ function Field({
   );
 }
 
-export default function BookingDrawer({ open, onClose, onSuccess }: Props) {
+export default function BookingDrawer({ open, onClose, onSuccess, booking }: Props) {
   const overlayRef = useRef<HTMLDivElement>(null);
 
   const {
@@ -113,7 +138,7 @@ export default function BookingDrawer({ open, onClose, onSuccess }: Props) {
 
   const roomsFieldArray = useFieldArray({ control, name: 'rooms_snapshot' });
   const others = useFieldArray({ control, name: 'other_charges' });
-  
+
   // Watch current snapshot arrays to update UI layout contextively
   const watchedSnapshot = watch('rooms_snapshot');
 
@@ -124,7 +149,7 @@ export default function BookingDrawer({ open, onClose, onSuccess }: Props) {
   // Sync snapshot append and delete variants to primary matching pivot records
   const handleAddRoomRow = () => {
     roomsFieldArray.append({ room_number: '', amount: 0 });
-    // Append matching payload slot explicitly for Pivot array 
+    // Append matching payload slot explicitly for Pivot array
     const currentPivot = watch('rooms') || [];
     setValue('rooms', [...currentPivot, { room_id: '', amount: 0 }]);
   };
@@ -132,7 +157,10 @@ export default function BookingDrawer({ open, onClose, onSuccess }: Props) {
   const handleRemoveRoomRow = (idx: number) => {
     roomsFieldArray.remove(idx);
     const currentPivot = watch('rooms') || [];
-    setValue('rooms', currentPivot.filter((_, i) => i !== idx));
+    setValue(
+      'rooms',
+      currentPivot.filter((_, i) => i !== idx)
+    );
   };
 
   const handleRoomSelection = (idx: number, roomItem: any, closeDropdown: () => void) => {
@@ -166,21 +194,51 @@ export default function BookingDrawer({ open, onClose, onSuccess }: Props) {
     return () => window.removeEventListener('keydown', handler);
   }, [onClose]);
 
-  const { mutate: AddBookingMutation, isPending } = useMutation({
-    mutationFn: AddBooking,
-    onSuccess: () => {
-      Toast.success('success', 'Added successfully.');
-      onSuccess();
-      onClose();
-    },
-    onError: (error: any) => {
-      console.error('Failed to add booking:', error);
-      Toast.error('error', error?.response?.data?.message || 'Failed to add booking.');
-    },
-  });
+const mutation = useMutation({
+  mutationFn: async (data: BookingForm) => {
+    if (isEdit && booking) {
+      const { data: res }: any = await PATCH_REQUEST(BOOKINGS.INDEX+'/'+booking.id, data);
+      return res;
+    }
+    const { data: res }: any = await POST_REQUEST(BOOKINGS.INDEX, data);
+    return res;
+  },
+  onSuccess: () => { reset(); onSuccess(); },
+});
 
-  const onSubmit = (data: BookingForm) => AddBookingMutation(data);
+  const onSubmit = (data: BookingForm) => mutation.mutate(data);
 
+  useEffect(() => {
+    if (booking) {
+      reset({
+        guest_name: booking.guest_name,
+        guest_father_name: booking.guest_father_name,
+        guest_nic: booking.guest_nic,
+        guest_phone: booking.guest_phone,
+        guest_profession: booking.guest_profession,
+        guest_purpose: booking.guest_purpose,
+        guest_city: booking.guest_city,
+        guest_address: booking.guest_address,
+        guest_country: booking.guest_country,
+        visitor_type: booking.visitor_type,
+        check_in: booking.check_in,
+        check_out: booking.check_out,
+        adults: booking.adults,
+        children: booking.children,
+        status: booking.status,
+        rooms_snapshot: booking.rooms_snapshot ?? [{ room_number: '', amount: 0 }],
+        other_charges: booking.other_charges ?? [],
+        discount: booking.discount,
+        amount_paid: booking.amount_paid,
+        notes: booking.notes,
+      });
+    } else {
+      reset({
+        /* default values */
+      });
+    }
+  }, [booking, open, reset]);
+  const isEdit = !!booking;
   if (!open) return null;
 
   return (
@@ -220,13 +278,19 @@ export default function BookingDrawer({ open, onClose, onSuccess }: Props) {
           }}>
           <div>
             <h6 className="fw-bold mb-0" style={{ color: 'var(--text-main)' }}>
-              New Booking
+              {isEdit ? `Edit Booking — ${booking?.guest_name}` : 'New Booking'}
             </h6>
             <p className="f-12-500 text-muted mb-0">Fill in guest and stay details</p>
           </div>
           <button
             onClick={onClose}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}>
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              color: 'var(--text-muted)',
+              padding: 4,
+            }}>
             <MdClose size={20} />
           </button>
         </div>
@@ -240,7 +304,10 @@ export default function BookingDrawer({ open, onClose, onSuccess }: Props) {
             <div className="row g-3">
               <div className="col-6">
                 <Field label="Full Name *" error={errors.guest_name?.message}>
-                  <input className="form-control" {...register('guest_name', { required: 'Required' })} />
+                  <input
+                    className="form-control"
+                    {...register('guest_name', { required: 'Required' })}
+                  />
                 </Field>
               </div>
               <div className="col-6">
@@ -255,7 +322,10 @@ export default function BookingDrawer({ open, onClose, onSuccess }: Props) {
               </div>
               <div className="col-6">
                 <Field label="Phone *" error={errors.guest_phone?.message}>
-                  <input className="form-control" {...register('guest_phone', { required: 'Required' })} />
+                  <input
+                    className="form-control"
+                    {...register('guest_phone', { required: 'Required' })}
+                  />
                 </Field>
               </div>
               <div className="col-6">
@@ -285,7 +355,7 @@ export default function BookingDrawer({ open, onClose, onSuccess }: Props) {
               </div>
               <div className="col-6">
                 <Field label="Visitor Type">
-                  <select className="form-select form-select-sm" {...register('visitor_type')}>
+                  <select className="form-select form-select" {...register('visitor_type')}>
                     {['single', 'family', 'friends', 'clients'].map((t) => (
                       <option key={t} value={t} className="text-capitalize">
                         {t}
@@ -302,27 +372,45 @@ export default function BookingDrawer({ open, onClose, onSuccess }: Props) {
             <div className="row g-3">
               <div className="col-6">
                 <Field label="Check In *" error={errors.check_in?.message}>
-                  <input type="date" className="form-control" {...register('check_in', { required: 'Required' })} />
+                  <input
+                    type="date"
+                    className="form-control"
+                    {...register('check_in', { required: 'Required' })}
+                  />
                 </Field>
               </div>
               <div className="col-6">
                 <Field label="Check Out *" error={errors.check_out?.message}>
-                  <input type="date" className="form-control" {...register('check_out', { required: 'Required' })} />
+                  <input
+                    type="date"
+                    className="form-control"
+                    {...register('check_out', { required: 'Required' })}
+                  />
                 </Field>
               </div>
               <div className="col-4">
                 <Field label="Adults">
-                  <input type="number" min={1} className="form-control" {...register('adults', { valueAsNumber: true, min: 1 })} />
+                  <input
+                    type="number"
+                    min={1}
+                    className="form-control"
+                    {...register('adults', { valueAsNumber: true, min: 1 })}
+                  />
                 </Field>
               </div>
               <div className="col-4">
                 <Field label="Children">
-                  <input type="number" min={0} className="form-control" {...register('children', { valueAsNumber: true, min: 0 })} />
+                  <input
+                    type="number"
+                    min={0}
+                    className="form-control"
+                    {...register('children', { valueAsNumber: true, min: 0 })}
+                  />
                 </Field>
               </div>
               <div className="col-4">
                 <Field label="Status">
-                  <select className="form-select form-select-sm" {...register('status')}>
+                  <select className="form-select form-select" {...register('status')}>
                     {['reserved', 'checked_in', 'checked_out', 'cancelled'].map((s) => (
                       <option key={s} value={s} className="text-capitalize">
                         {s.replace('_', ' ')}
@@ -340,59 +428,69 @@ export default function BookingDrawer({ open, onClose, onSuccess }: Props) {
               <div key={field.id} className="d-flex align-items-end gap-2 mb-2">
                 <div className="flex-fill">
                   <Field label={idx === 0 ? 'Room Number' : ''}>
-                    <div className='w-100'>
-                    <Dropdown
-                      align="left"
-                      minWidth={240}
-                      trigger={
-                        <div className="form-control d-flex justify-content-between align-items-center cursor-pointer w-100">
-                          <span className={watchedSnapshot[idx]?.room_number ? 'text-dark' : 'text-muted'}>
-                            {watchedSnapshot[idx]?.room_number || 'Select a Room'}
-                          </span>
-                          <MdArrowDropDown size={18} className="text-muted" />
-                        </div>
-                      }
-                    >
-                      
-                      {(close) => (
-                        <DropdownSection>
-                          {isLoading ? (
-                            <div className="px-3 py-2 f-12-500 text-muted">Loading rooms...</div>
-                          ) : availableRooms.length === 0 ? (
-                            <div className="px-3 py-2 f-12-500 text-muted">No rooms available</div>
-                          ) : (
-                            availableRooms.map((roomItem: any) => (
-                              <DropdownItem
-                                key={roomItem.id}
-                                active={watchedSnapshot[idx]?.room_number === roomItem.room_number}
-                                onClick={() => handleRoomSelection(idx, roomItem, close)}
-                              >
-                                Room {roomItem.room_number} ({roomItem.type || 'Standard'}) — Rs.{roomItem.price || roomItem.amount || 0}
-                              </DropdownItem>
-                            ))
-                          )}
-                        </DropdownSection>
-                      )}
-                    </Dropdown>
+                    <div className="w-100">
+                      <Dropdown
+                        align="left"
+                        minWidth={240}
+                        trigger={
+                          <div className="form-control d-flex justify-content-between align-items-center cursor-pointer w-100">
+                            <span
+                              className={
+                                watchedSnapshot[idx]?.room_number ? 'text-dark' : 'text-muted'
+                              }>
+                              {watchedSnapshot[idx]?.room_number || 'Select a Room'}
+                            </span>
+                            <MdArrowDropDown size={18} className="text-muted" />
+                          </div>
+                        }>
+                        {(close) => (
+                          <DropdownSection>
+                            {isLoading ? (
+                              <div className="px-3 py-2 f-12-500 text-muted">Loading rooms...</div>
+                            ) : availableRooms.length === 0 ? (
+                              <div className="px-3 py-2 f-12-500 text-muted">
+                                No rooms available
+                              </div>
+                            ) : (
+                              availableRooms.map((roomItem: any) => (
+                                <DropdownItem
+                                  key={roomItem.id}
+                                  active={
+                                    watchedSnapshot[idx]?.room_number === roomItem.room_number
+                                  }
+                                  onClick={() => handleRoomSelection(idx, roomItem, close)}>
+                                  Room {roomItem.room_number} ({roomItem.type || 'Standard'}) — Rs.
+                                  {roomItem.price || roomItem.amount || 0}
+                                </DropdownItem>
+                              ))
+                            )}
+                          </DropdownSection>
+                        )}
+                      </Dropdown>
                     </div>
                     {/* Hidden inputs keep values validated cleanly within React Hook Form */}
-                    <input type="hidden" {...register(`rooms_snapshot.${idx}.room_number`, { required: 'Select a room' })} />
+                    <input
+                      type="hidden"
+                      {...register(`rooms_snapshot.${idx}.room_number`, {
+                        required: 'Select a room',
+                      })}
+                    />
                     <input type="hidden" {...register(`rooms.${idx}.room_id`)} />
                   </Field>
                 </div>
-                
+
                 <div style={{ width: 130 }}>
                   <Field label={idx === 0 ? 'Price / Night' : ''}>
                     <input
                       type="number"
                       className="form-control"
                       placeholder="0"
-                      {...register(`rooms_snapshot.${idx}.amount`, { 
+                      {...register(`rooms_snapshot.${idx}.amount`, {
                         valueAsNumber: true,
                         onChange: (e) => {
                           // Mirror input value modifications directly to the sibling Pivot configuration hook
                           setValue(`rooms.${idx}.amount`, Number(e.target.value));
-                        }
+                        },
                       })}
                     />
                   </Field>
@@ -402,8 +500,12 @@ export default function BookingDrawer({ open, onClose, onSuccess }: Props) {
                     type="button"
                     onClick={() => handleRemoveRoomRow(idx)}
                     className="btn btn-sm mb-3"
-                    style={{ color: 'var(--danger)', background: '#ffebee', border: 'none', borderRadius: 6 }}
-                  >
+                    style={{
+                      color: 'var(--danger)',
+                      background: '#ffebee',
+                      border: 'none',
+                      borderRadius: 6,
+                    }}>
                     <MdDelete size={16} />
                   </button>
                 )}
@@ -418,9 +520,8 @@ export default function BookingDrawer({ open, onClose, onSuccess }: Props) {
                 background: 'var(--primary-bg)',
                 border: '1px dashed var(--primary)',
                 borderRadius: 6,
-              }}
-            >
-              <MdAdd size={15} /> Add Room
+              }}>
+              <MdAdd size={15} /> {mutation.isPending ? 'Saving…' : isEdit ? 'Update Booking' : 'Save Booking'}
             </button>
 
             {/* ── Other Charges ─────────────────────────────────── */}
@@ -430,20 +531,33 @@ export default function BookingDrawer({ open, onClose, onSuccess }: Props) {
               <div key={field.id} className="d-flex align-items-end gap-2 mb-2">
                 <div className="flex-fill">
                   <Field label={idx === 0 ? 'Description' : ''}>
-                    <input className="form-control" placeholder="e.g. Laundry" {...register(`other_charges.${idx}.name`, { required: true })} />
+                    <input
+                      className="form-control"
+                      placeholder="e.g. Laundry"
+                      {...register(`other_charges.${idx}.name`, { required: true })}
+                    />
                   </Field>
                 </div>
                 <div style={{ width: 130 }}>
                   <Field label={idx === 0 ? 'Amount' : ''}>
-                    <input type="number" className="form-control" placeholder="0" {...register(`other_charges.${idx}.amount`, { valueAsNumber: true })} />
+                    <input
+                      type="number"
+                      className="form-control"
+                      placeholder="0"
+                      {...register(`other_charges.${idx}.amount`, { valueAsNumber: true })}
+                    />
                   </Field>
                 </div>
                 <button
                   type="button"
                   onClick={() => others.remove(idx)}
                   className="btn btn-sm mb-3"
-                  style={{ color: 'var(--danger)', background: '#ffebee', border: 'none', borderRadius: 6 }}
-                >
+                  style={{
+                    color: 'var(--danger)',
+                    background: '#ffebee',
+                    border: 'none',
+                    borderRadius: 6,
+                  }}>
                   <MdDelete size={16} />
                 </button>
               </div>
@@ -457,8 +571,7 @@ export default function BookingDrawer({ open, onClose, onSuccess }: Props) {
                 background: 'var(--primary-bg)',
                 border: '1px dashed var(--primary)',
                 borderRadius: 6,
-              }}
-            >
+              }}>
               <MdAdd size={15} /> Add Charge
             </button>
 
@@ -468,12 +581,22 @@ export default function BookingDrawer({ open, onClose, onSuccess }: Props) {
             <div className="row g-3">
               <div className="col-6">
                 <Field label="Discount (Rs.)">
-                  <input type="number" min={0} className="form-control" {...register('discount', { valueAsNumber: true })} />
+                  <input
+                    type="number"
+                    min={0}
+                    className="form-control"
+                    {...register('discount', { valueAsNumber: true })}
+                  />
                 </Field>
               </div>
               <div className="col-6">
                 <Field label="Amount Paid (Rs.)">
-                  <input type="number" min={0} className="form-control" {...register('amount_paid', { valueAsNumber: true })} />
+                  <input
+                    type="number"
+                    min={0}
+                    className="form-control"
+                    {...register('amount_paid', { valueAsNumber: true })}
+                  />
                 </Field>
               </div>
               <div className="col-12">
@@ -486,24 +609,29 @@ export default function BookingDrawer({ open, onClose, onSuccess }: Props) {
         </div>
 
         {/* Footer */}
-        <div className="d-flex justify-content-end align-items-center gap-2 px-4 py-3" style={{ borderTop: '1px solid var(--border-color)' }}>
-          <button type="button" onClick={onClose} className="btn btn-sm general-border f-12-600 text-muted px-3" style={{ borderRadius: 6 }}>
+        <div
+          className="d-flex justify-content-end align-items-center gap-2 px-4 py-3"
+          style={{ borderTop: '1px solid var(--border-color)' }}>
+          <button
+            type="button"
+            onClick={onClose}
+            className="btn btn-sm general-border f-12-600 text-muted px-3"
+            style={{ borderRadius: 6 }}>
             Cancel
           </button>
           <button
             type="submit"
             form="booking-form"
-            disabled={isSubmitting || isPending}
+            disabled={isSubmitting || mutation.isPending}
             className="btn btn-sm f-12-600 px-4"
             style={{
               background: 'var(--primary)',
               color: '#fff',
               borderRadius: 6,
               border: 'none',
-              opacity: isSubmitting || isPending ? 0.7 : 1,
-            }}
-          >
-            {isPending ? 'Saving…' : 'Save Booking'}
+              opacity: isSubmitting || mutation.isPending ? 0.7 : 1,
+            }}>
+            {mutation.isPending ? 'Saving…' : 'Save Booking'}
           </button>
         </div>
       </div>

@@ -21,21 +21,26 @@ import { GetBookings } from '@/server/apis/bookings';
 // ── Types & helpers (same as before) ─────────────────────────────
 interface Booking {
   id: number;
-  ref: string;
   guest_name: string;
+  guest_father_name: string;
+  guest_nic: string;
   guest_phone: string;
+  guest_profession: string;
+  guest_purpose: string;
   guest_city: string;
+  guest_address: string;
+  guest_country: string;
   visitor_type: string;
   check_in: string;
   check_out: string;
-  nights: number;
   adults: number;
   children: number;
   status: string;
-  amount: number;
+  rooms_snapshot: { room_number: string; amount: number }[];
+  other_charges: { name: string; amount: number }[];
+  discount: number;
   amount_paid: number;
-  amount_due: number;
-  created_at: string;
+  notes: string;
 }
 
 const STATUS_MAP: Record<string, { label: string; bg: string; color: string }> = {
@@ -85,8 +90,19 @@ const DEFAULT_FILTERS: BookingFilters = {
   amount_max: '',
 };
 
+
+
+// ── Page ──────────────────────────────────────────────────────────
+export default function BookingsPage() {
+  const qc = useQueryClient();
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(15);
+  const [search, setSearch] = useState('');
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [filters, setFilters] = useState<BookingFilters>(DEFAULT_FILTERS);
+  const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
 // ── Columns ───────────────────────────────────────────────────────
-const COLUMNS: ColumnDef<Booking, any>[] = [
+const COLUMNS: ColumnDef<Booking, any>[] = useMemo(() => [
   {
     accessorKey: 'ref',
     header: 'Ref',
@@ -215,6 +231,7 @@ const COLUMNS: ColumnDef<Booking, any>[] = [
           <MdVisibility size={17} />
         </Link>
         <button
+        onClick={()=>{setDrawerOpen(true); setEditingBooking(i.row.original)}}
           style={{
             background: 'none',
             border: 'none',
@@ -228,17 +245,7 @@ const COLUMNS: ColumnDef<Booking, any>[] = [
       </div>
     ),
   },
-];
-
-// ── Page ──────────────────────────────────────────────────────────
-export default function BookingsPage() {
-  const qc = useQueryClient();
-  const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(15);
-  const [search, setSearch] = useState('');
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [filters, setFilters] = useState<BookingFilters>(DEFAULT_FILTERS);
-
+],[]);
   // Count active filters for badge
   const activeCount = useMemo(
     () => Object.entries(filters).filter(([k, v]) => v !== '' && v !== null).length,
@@ -444,6 +451,7 @@ export default function BookingsPage() {
 
       <BookingDrawer
         open={drawerOpen}
+        booking={editingBooking}
         onClose={() => setDrawerOpen(false)}
         onSuccess={() => {
           setDrawerOpen(false);

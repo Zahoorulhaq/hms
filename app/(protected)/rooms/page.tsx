@@ -1,35 +1,30 @@
-// app/(dashboard)/bookings/page.tsx
+// app/(dashboard)/rooms/page.tsx
 'use client';
 
 import { useState, useMemo, useCallback } from 'react';
 import { ColumnDef } from '@tanstack/react-table';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
-import { format } from 'date-fns';
-import { GET_REQUEST } from '@/server/https';
-import { BOOKINGS, ROOMS } from '@/server/endpoints';
+
 import AppTable from '@/components/ui/AppTable';
 import Pagination from '@/components/ui/Pagination';
 import FilterPanel from '@/components/ui/FiltersPanel';
 import { FilterSelect, FilterAmountRange, FilterDateRange } from '@/components/ui/FilterFields';
-import BookingDrawer from '@/components/bookings/BookingDrawer';
-import type { PaginationMeta } from '@/components/ui/Pagination';
-import { MdEdit, MdVisibility } from 'react-icons/md';
-import { AddRoom, GetRooms } from '@/server/apis/rooms';
-import { GetBookings } from '@/server/apis/bookings';
-import { capitalize } from 'lodash';
+
+import { MdEdit, MdVisibility, MdDelete } from 'react-icons/md';
+import { GetRooms } from '@/server/apis/rooms';
 import AddRoomDrawer from '@/components/rooms/AddRoomDrawer';
 
 // ── Types & helpers (same as before) ─────────────────────────────
-interface Room{
-    id: number;
-    room_number: string;
-    ref: string;
-    room_type: string;
-    status: string;
-    price_per_night: number;
-    capacity: number;
-
+interface Room {
+  id: number;
+  room_number: string;
+  ref: string;
+  room_type: string;
+  status: string;
+  price_per_night: number;
+  capacity: number;
+  floor: string;
 }
 
 const STATUS_MAP: Record<string, { label: string; bg: string; color: string }> = {
@@ -48,117 +43,152 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-function fmt(d: string) {
-  return new Date(d).toLocaleDateString('en-PK', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-  });
-}
-
 // ── Filter state type ─────────────────────────────────────────────
-interface BookingFilters {
+interface RoomFilters {
   status: string;
   capacity_min: string;
   capacity_max: string;
   price_min: string;
   price_max: string;
+  floor: string;
 }
 
-const DEFAULT_FILTERS: BookingFilters = {
+const DEFAULT_FILTERS: RoomFilters = {
   status: '',
   capacity_min: '',
   capacity_max: '',
   price_min: '',
   price_max: '',
+  floor: '',
 };
 
-// ── Columns ───────────────────────────────────────────────────────
-const COLUMNS: ColumnDef<Room, any>[] = [
-  {
-    accessorKey: 'ref',
-    header: 'Ref',
-    enableSorting: false,
-    cell: (i) => (
-      <Link
-        href={`/rooms/${i.row.original.id}`}
-        className="f-12-600 text-decoration-none"
-        style={{ color: 'var(--primary)' }}>
-        {i.getValue()}
-      </Link>
-    ),
-  },
-  {
-    accessorKey: 'room_number',
-    header: 'Room Number',
-    enableSorting: true,
-    cell: (i) => (
-      <span className="f-12-500" style={{ color: 'var(--text-main)' }}>
-        {i.getValue()}
-      </span>
-    ),
-  },
-  {
-    accessorKey: 'room_type',
-    header: 'Room Type',
-    enableSorting: false,
-    cell: (i) => <span className="f-12-500 text-muted">{i.getValue()}</span>,
-  },
-  {
-    accessorKey: 'price_per_night',
-    header: 'Price/Night',
-    enableSorting: true,
-    cell: (i) => <span className="f-12-500 text-muted">{i.getValue()}</span>,
-  },
-  {
-    accessorKey: 'status',
-    header: 'Status',
-    enableSorting: true,
-    cell: (i) => <StatusBadge status={(i.getValue())} />,
-  },
-  {
-    accessorKey: 'capacity',
-    header: 'Capacity',
-    enableSorting: true,
-    cell: (i) => <span className="f-12-500 text-muted">{i.getValue()}</span>,
-  },
- 
-  {
-    id: 'actions',
-    header: 'Actions',
-    enableSorting: false,
-    cell: (i) => (
-      <div className="d-flex align-items-center gap-2">
-        <Link
-          href={`/rooms/${i.row.original.id}`}
-          style={{ color: 'var(--primary)', lineHeight: 1 }}>
-          <MdVisibility size={17} />
-        </Link>
-        <button
-          style={{
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-            color: 'var(--text-muted)',
-            lineHeight: 1,
-            padding: 0,
-          }}>
-          <MdEdit size={17} />
-        </button>
-      </div>
-    ),
-  },
-];
-
-// ── Page ──────────────────────────────────────────────────────────
-export default function BookingsPage() {
+export default function RoomsPage() {
   const qc = useQueryClient();
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(15);
   const [search, setSearch] = useState('');
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [filters, setFilters] = useState<BookingFilters>(DEFAULT_FILTERS);
-
+  const [editRoom, setEditRoom] = useState<Room | null>(null);
+  const [filters, setFilters] = useState<RoomFilters>(DEFAULT_FILTERS);
+  const columns: ColumnDef<Room, any>[] = useMemo(
+    () => [
+      {
+        accessorKey: 'ref',
+        header: 'Ref',
+        enableSorting: false,
+        cell: (i) => (
+          <span className="f-12-600" style={{ color: 'var(--primary)' }}>
+            {i.getValue()}
+          </span>
+        ),
+      },
+      {
+        accessorKey: 'room_number',
+        header: 'Room No.',
+        enableSorting: true,
+        cell: (i) => (
+          <span className="f-12-600" style={{ color: 'var(--text-main)' }}>
+            {i.getValue()}
+          </span>
+        ),
+      },
+      {
+        accessorKey: 'room_type',
+        header: 'Type',
+        enableSorting: true,
+        cell: (i) => (
+          <span
+            className="rounded-pill px-2 py-1 f-12-600 text-capitalize"
+            style={{ background: 'var(--primary-bg)', color: 'var(--primary)' }}>
+            {i.getValue()}
+          </span>
+        ),
+      },
+      {
+        accessorKey: 'floor',
+        header: 'Floor',
+        enableSorting: true,
+        cell: (i) => <span className="f-12-500 text-muted">{i.getValue() ?? '—'}</span>,
+      },
+      {
+        accessorKey: 'capacity',
+        header: 'Capacity',
+        enableSorting: false,
+        cell: (i) => <span className="f-12-500 text-muted">{i.getValue()} guests</span>,
+      },
+      {
+        accessorKey: 'price_per_night',
+        header: 'Price / Night',
+        enableSorting: true,
+        cell: (i) => (
+          <span className="f-12-600" style={{ color: 'var(--text-main)' }}>
+            Rs. {Number(i.getValue()).toLocaleString()}
+          </span>
+        ),
+      },
+      {
+        accessorKey: 'status',
+        header: 'Status',
+        enableSorting: true,
+        cell: (i) => <StatusBadge status={i.getValue()} />,
+      },
+      {
+        accessorKey: 'notes',
+        header: 'Notes',
+        enableSorting: false,
+        cell: (i) => (
+          <span
+            className="f-12-500 text-muted"
+            style={{
+              maxWidth: 200,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              display: 'block',
+            }}>
+            {i.getValue() || '—'}
+          </span>
+        ),
+      },
+      {
+        id: 'actions',
+        header: 'Actions',
+        enableSorting: false,
+        cell: (i) => (
+          <div className="d-flex align-items-center gap-2">
+            <button
+              title="Edit"
+              onClick={() => {
+                setEditRoom(i.row.original);
+                setDrawerOpen(true);
+              }}
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                color: 'var(--primary)',
+                lineHeight: 1,
+                padding: 0,
+              }}>
+              <MdEdit size={17} />
+            </button>
+            <button
+              title="Delete"
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                color: 'var(--danger)',
+                lineHeight: 1,
+                padding: 0,
+              }}>
+              <MdDelete size={17} />
+            </button>
+          </div>
+        ),
+      },
+    ],
+    []
+  );
   // Count active filters for badge
   const activeCount = useMemo(
     () => Object.entries(filters).filter(([k, v]) => v !== '' && v !== null).length,
@@ -173,7 +203,6 @@ export default function BookingsPage() {
 
     if (filters.status) conditions.push({ field: 'status', op: '=', value: filters.status });
 
-
     if (filters.price_min)
       conditions.push({
         field: 'price_per_night',
@@ -184,22 +213,32 @@ export default function BookingsPage() {
       conditions.push({
         field: 'price_per_night',
         op: '<=',
-       value: Number(filters.price_max),
+        value: Number(filters.price_max),
       });
     if (filters.capacity_min)
       conditions.push({ field: 'capacity', op: '>=', value: Number(filters.capacity_min) });
     if (filters.capacity_max)
       conditions.push({ field: 'capacity', op: '<=', value: Number(filters.capacity_max) });
+    if (filters.floor)
+      conditions.push({ field: 'floor', op: '=', value: filters.floor });
 
     return conditions.length ? { AND: conditions } : {};
-  }, [search, filters]);
+  }, [filters]);
 
   const { data, isLoading, meta } = GetRooms({
     page,
     limit,
     filters: buildFilter(),
-    select: ['id', 'room_number', 'room_type', 'status', 'price_per_night', 'capacity', 'ref'],
-    
+    select: JSON.stringify([
+      'id',
+      'room_number',
+      'room_type',
+      'status',
+      'price_per_night',
+      'capacity',
+      'ref',
+      'floor',
+    ]),
   });
 
   const room: Room[] = data ?? [];
@@ -227,7 +266,7 @@ export default function BookingsPage() {
             className="btn btn-sm f-12-600 px-3 py-2"
             style={{ background: 'var(--primary)', color: '#fff', borderRadius: 8 }}
             onClick={() => setDrawerOpen(true)}>
-            + New Booking
+            + New Room
           </button>
         </div>
         {/* Search + filter toggle */}
@@ -267,14 +306,25 @@ export default function BookingsPage() {
                 { label: 'Reserved', value: 'reserved' },
               ]}
             />
+            <FilterSelect
+              label="Floor"
+              value={filters.floor}
+              onChange={(v) => {
+                setFilters((f) => ({ ...f, floor: v }));
+                setPage(1);
+              }}
+              options={[
+                { label: 'Ground', value: '0' },
+                { label: '1st', value: '1' },
+                { label: '2nd', value: '2' },
+              ]}
+            />
 
-          
-            
             {/* Amount range */}
             <FilterAmountRange
               minVal={filters.price_min}
               maxVal={filters.price_max}
-              label='Price/Night'
+              label="Price/Night"
               onMinChange={(v) => {
                 setFilters((f) => ({ ...f, price_min: v }));
                 setPage(1);
@@ -287,7 +337,7 @@ export default function BookingsPage() {
             <FilterAmountRange
               minVal={filters.capacity_min}
               maxVal={filters.capacity_max}
-              label='Capacity'
+              label="Capacity"
               onMinChange={(v) => {
                 setFilters((f) => ({ ...f, capacity_min: v }));
                 setPage(1);
@@ -299,7 +349,6 @@ export default function BookingsPage() {
             />
 
             {/* Date range */}
-          
           </FilterPanel>
         </div>
         {/* Table card */}
@@ -308,7 +357,7 @@ export default function BookingsPage() {
           style={{ overflow: 'hidden' }}>
           <AppTable<Room>
             data={data}
-            columns={COLUMNS}
+            columns={columns}
             loading={isLoading}
             emptyText="No rooms found."
             stickyFirst
@@ -332,9 +381,14 @@ export default function BookingsPage() {
 
       <AddRoomDrawer
         open={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
+        onClose={() => {
+          setEditRoom(null);
+          setDrawerOpen(false);
+        }}
+        room={editRoom}
         onSuccess={() => {
           setDrawerOpen(false);
+          setEditRoom(null)
           qc.invalidateQueries({ queryKey: ['rooms'] });
         }}
       />

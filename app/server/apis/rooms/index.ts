@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { GET_REQUEST, POST_REQUEST } from '@/server/https';
+import { GET_REQUEST, PATCH_REQUEST, POST_REQUEST } from '@/server/https';
 import { ROOMS } from '@/server/endpoints';
 
 export const GetRooms = ({
@@ -11,14 +11,14 @@ export const GetRooms = ({
   filters: any;
   page?: number;
   limit?: number;
-  select?: string[];
+  select?: string;
 }) => {
   // Only send filter — no select, no group, no include
   const params = {
     filter: JSON.stringify(filters),
     limit: limit || 100,
     page: page || 1,
-    select: select ||  ['id', 'room_number', 'room_type', 'status'],
+    select: select ||  JSON.stringify(['id', 'room_number', 'room_type', 'status']),
   };
 
   const { isLoading, data, error, refetch } = useQuery({
@@ -34,5 +34,9 @@ export const GetRooms = ({
 };
 export const AddRoom = async (roomData: any) => {
   const { data }: any = await POST_REQUEST(ROOMS.INDEX, roomData);
+  return data.data;
+};
+export const EditRoom = async (roomData: any, id:number) => {
+  const { data }: any = await PATCH_REQUEST(`${ROOMS.INDEX}/${id}`, roomData);
   return data.data;
 };

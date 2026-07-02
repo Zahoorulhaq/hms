@@ -6,33 +6,34 @@ import { useMutation } from '@tanstack/react-query';
 import { MdClose, MdAdd, MdDelete, MdArrowDropDown } from 'react-icons/md';
 import { AddBooking } from '@/server/apis/bookings';
 import { Toast } from '../Toast';
-import { AddRoom, GetRooms } from '@/server/apis/rooms';
-import Dropdown, { DropdownItem, DropdownSection } from '../ui/Dropdown';
+import { AddRoom, EditRoom, GetRooms } from '@/server/apis/rooms';
 
 // ── Types ─────────────────────────────────────────────────────────
 
 interface RoomForm {
   room_number: string;
   capacity: number;
-  price_per_night: string;
+  price_per_night: number;
   room_type: string;
+  floor: string;
+}
+
+interface Room {
+   id: number;
+    room_number: string;
+    ref: string;
+    room_type: string;
+    status: string;
+    price_per_night: number;
+    capacity: number;
+    floor:string
 }
 
 interface Props {
   open: boolean;
   onClose: () => void;
   onSuccess: () => void;
-}
-
-function Section({ title }: { title: string }) {
-  return (
-    <div className="mb-3 mt-4">
-      <div className="f-12-600 text-muted text-uppercase" style={{ letterSpacing: '0.06em' }}>
-        {title}
-      </div>
-      <hr className="mt-1 mb-0" style={{ borderColor: 'var(--border-color)' }} />
-    </div>
-  );
+  room?: Room | null;
 }
 
 function Field({
@@ -55,9 +56,9 @@ function Field({
   );
 }
 
-export default function BookingDrawer({ open, onClose, onSuccess }: Props) {
+export default function AddRoomDrawer({ open, onClose, onSuccess, room }: Props) {
   const overlayRef = useRef<HTMLDivElement>(null);
-
+  const isEdit = !!room;
   const {
     register,
     handleSubmit,
@@ -70,19 +71,31 @@ export default function BookingDrawer({ open, onClose, onSuccess }: Props) {
     defaultValues: {
       room_number: '',
       capacity: 1,
-      price_per_night: '',
+      price_per_night: 0,
       room_type: 'standard',
+      floor: '',
     },
   });
+  useEffect(() => {
+    if (room) {
+      reset({
+        room_number: room.room_number,
+        room_type: room.room_type,
+        floor: room.floor,
+        capacity: room.capacity,
+        price_per_night: room.price_per_night,
+      });
+    } else {
+      reset({
+        room_type: 'standard',
+        capacity: 1,
+        price_per_night: 0,
+        floor: '',
+        room_number: '',
+      });
+    }
+  }, [room, reset, open]);
 
-  
-  // Watch current snapshot arrays to update UI layout contextively
-
-  // Fetch active inventory items natively
-  const { data: roomsData, isLoading } = GetRooms({ filters: {} });
-  const availableRooms = roomsData || [];
-
-  // Close on overlay click
   const handleOverlay = (e: React.MouseEvent) => {
     if (e.target === overlayRef.current) onClose();
   };
@@ -113,8 +126,26 @@ export default function BookingDrawer({ open, onClose, onSuccess }: Props) {
       Toast.error('error', error?.response?.data?.message || 'Failed to add room.');
     },
   });
+  const { mutate: EditRoomMutation, isPending:isEditing } = useMutation({
+    mutationFn: (roomData: any) => EditRoom(roomData, room?.id||0),
+    onSuccess: () => {
+      Toast.success('success', 'Room updated successfully.');
+      onSuccess();
+      onClose();
+    },
+    onError: (error: any) => {
+      console.error('Failed to update room:', error);
+      Toast.error('error', error?.response?.data?.message || 'Failed to update room.');
+    },
+  });
 
-  const onSubmit = (data: RoomForm) => AddRoomMutation(data);
+  const onSubmit = (data: RoomForm) => {
+    if (isEdit && room) {
+      EditRoomMutation(data);
+    } else {
+      AddRoomMutation(data);
+    }
+  };
 
   if (!open) return null;
 
@@ -161,7 +192,13 @@ export default function BookingDrawer({ open, onClose, onSuccess }: Props) {
           </div>
           <button
             onClick={onClose}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}>
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              color: 'var(--text-muted)',
+              padding: 4,
+            }}>
             <MdClose size={20} />
           </button>
         </div>
@@ -174,24 +211,46 @@ export default function BookingDrawer({ open, onClose, onSuccess }: Props) {
             <div className="row g-3">
               <div className="col-6">
                 <Field label="Room number *" error={errors.room_number?.message}>
-                  <input placeholder='i.e V101, S101' className="form-control" {...register('room_number', { required: 'Required' })} />
+                  <input
+                    placeholder="i.e V101, S101"
+                    className="form-control"
+                    {...register('room_number', { required: 'Required' })}
+                  />
                 </Field>
               </div>
               <div className="col-6">
                 <Field label="Capacity *" error={errors.capacity?.message}>
-                  <input type='number' min={0} className="form-control" {...register('capacity', { required: 'Required' })} />
+                  <input
+                    type="number"
+                    min={0}
+                    className="form-control"
+                    {...register('capacity', { required: 'Required' })}
+                  />
                 </Field>
               </div>
-             
+
               <div className="col-6">
-                <Field label="Price per night *" error={errors.price_per_night?.message}>
-                  <input placeholder='Enter price per night of the room' type='number' min={0} className="form-control" {...register('price_per_night', { required: 'Required' })} />
+                <Field label="Floor *">
+                  <select
+                 
+                    className="form-select form-select"
+                    {...register('floor', { required: 'Required' })}
+                    value={watch().floor}>
+                    {['0', '1', '2'].map((t) => (
+                      <option key={t} value={t} className="text-capitalize">
+                        {t}
+                      </option>
+                    ))}
+                  </select>
                 </Field>
               </div>
-            
+
               <div className="col-6">
                 <Field label="Room type *">
-                  <select className="form-select form-select" {...register('room_type', { required: 'Required' })} value={watch().room_type}>
+                  <select
+                    className="form-select form-select"
+                    {...register('room_type', { required: 'Required' })}
+                    value={watch().room_type}>
                     {['suit', 'standard', 'vip', 'shop'].map((t) => (
                       <option key={t} value={t} className="text-capitalize">
                         {t}
@@ -200,15 +259,30 @@ export default function BookingDrawer({ open, onClose, onSuccess }: Props) {
                   </select>
                 </Field>
               </div>
+              <div className="">
+                <Field label="Price per night *" error={errors.price_per_night?.message}>
+                  <input
+                    placeholder="Enter price per night of the room"
+                    type="number"
+                    min={0}
+                    className="form-control"
+                    {...register('price_per_night', { required: 'Required' })}
+                  />
+                </Field>
+              </div>
             </div>
-
-
           </form>
         </div>
 
         {/* Footer */}
-        <div className="d-flex justify-content-end align-items-center gap-2 px-4 py-3" style={{ borderTop: '1px solid var(--border-color)' }}>
-          <button type="button" onClick={onClose} className="btn btn-sm general-border f-12-600 text-muted px-3" style={{ borderRadius: 6 }}>
+        <div
+          className="d-flex justify-content-end align-items-center gap-2 px-4 py-3"
+          style={{ borderTop: '1px solid var(--border-color)' }}>
+          <button
+            type="button"
+            onClick={onClose}
+            className="btn btn-sm general-border f-12-600 text-muted px-3"
+            style={{ borderRadius: 6 }}>
             Cancel
           </button>
           <button
@@ -222,8 +296,7 @@ export default function BookingDrawer({ open, onClose, onSuccess }: Props) {
               borderRadius: 6,
               border: 'none',
               opacity: isSubmitting || isPending ? 0.7 : 1,
-            }}
-          >
+            }}>
             {isPending ? 'Adding...' : 'Add Room'}
           </button>
         </div>
