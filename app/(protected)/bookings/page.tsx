@@ -6,8 +6,6 @@ import { ColumnDef } from '@tanstack/react-table';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { format } from 'date-fns';
-import { GET_REQUEST } from '@/server/https';
-import { BOOKINGS, ROOMS } from '@/server/endpoints';
 import AppTable from '@/components/ui/AppTable';
 import Pagination from '@/components/ui/Pagination';
 import FilterPanel from '@/components/ui/FiltersPanel';
@@ -41,6 +39,9 @@ interface Booking {
   discount: number;
   amount_paid: number;
   notes: string;
+  rooms:any;
+  actual_check_in:string;
+  actual_check_out:string
 }
 
 const STATUS_MAP: Record<string, { label: string; bg: string; color: string }> = {
@@ -90,8 +91,6 @@ const DEFAULT_FILTERS: BookingFilters = {
   amount_max: '',
 };
 
-
-
 // ── Page ──────────────────────────────────────────────────────────
 export default function BookingsPage() {
   const qc = useQueryClient();
@@ -101,151 +100,157 @@ export default function BookingsPage() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [filters, setFilters] = useState<BookingFilters>(DEFAULT_FILTERS);
   const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
-// ── Columns ───────────────────────────────────────────────────────
-const COLUMNS: ColumnDef<Booking, any>[] = useMemo(() => [
-  {
-    accessorKey: 'ref',
-    header: 'Ref',
-    enableSorting: false,
-    cell: (i) => (
-      <Link
-        href={`/bookings/${i.row.original.id}`}
-        className="f-12-600 text-decoration-none"
-        style={{ color: 'var(--primary)' }}>
-        {i.getValue()}
-      </Link>
-    ),
-  },
-  {
-    accessorKey: 'guest_name',
-    header: 'Guest Name',
-    enableSorting: true,
-    cell: (i) => (
-      <span className="f-12-500" style={{ color: 'var(--text-main)' }}>
-        {i.getValue()}
-      </span>
-    ),
-  },
-  {
-    accessorKey: 'guest_phone',
-    header: 'Phone',
-    enableSorting: false,
-    cell: (i) => <span className="f-12-500 text-muted">{i.getValue()}</span>,
-  },
-  {
-    accessorKey: 'guest_city',
-    header: 'City',
-    enableSorting: true,
-    cell: (i) => <span className="f-12-500 text-muted">{i.getValue()}</span>,
-  },
-  {
-    accessorKey: 'visitor_type',
-    header: 'Visit Type',
-    enableSorting: false,
-    cell: (i) => <span className="f-12-500 text-capitalize text-muted">{i.getValue()}</span>,
-  },
-  {
-    accessorKey: 'check_in',
-    header: 'Check In',
-    enableSorting: true,
-    cell: (i) => (
-      <span className="f-12-500" style={{ color: 'var(--text-main)' }}>
-        {fmt(i.getValue())}
-      </span>
-    ),
-  },
-  {
-    accessorKey: 'check_out',
-    header: 'Check Out',
-    enableSorting: true,
-    cell: (i) => (
-      <span className="f-12-500" style={{ color: 'var(--text-main)' }}>
-        {fmt(i.getValue())}
-      </span>
-    ),
-  },
-  {
-    accessorKey: 'nights',
-    header: 'Nights',
-    enableSorting: true,
-    cell: (i) => <span className="f-12-500 text-muted">{i.getValue()}</span>,
-  },
-  {
-    accessorKey: 'adults',
-    header: 'Adults',
-    enableSorting: false,
-    cell: (i) => <span className="f-12-500 text-muted">{i.getValue()}</span>,
-  },
-  {
-    accessorKey: 'status',
-    header: 'Status',
-    enableSorting: true,
-    cell: (i) => <StatusBadge status={i.getValue()} />,
-  },
-  {
-    accessorKey: 'amount',
-    header: 'Amount',
-    enableSorting: true,
-    cell: (i) => (
-      <span className="f-12-600" style={{ color: 'var(--text-main)' }}>
-        Rs. {Number(i.getValue()).toLocaleString()}
-      </span>
-    ),
-  },
-  {
-    accessorKey: 'amount_paid',
-    header: 'Paid',
-    enableSorting: true,
-    cell: (i) => (
-      <span className="f-12-600 text-success">Rs. {Number(i.getValue()).toLocaleString()}</span>
-    ),
-  },
-  {
-    accessorKey: 'amount_due',
-    header: 'Due',
-    enableSorting: true,
-    cell: (i) => {
-      const due = Number(i.getValue());
-      return (
-        <span className={`f-12-600 ${due > 0 ? 'text-danger' : 'text-success'}`}>
-          Rs. {due.toLocaleString()}
-        </span>
-      );
-    },
-  },
-  {
-    accessorKey: 'created_at',
-    header: 'Created',
-    enableSorting: true,
-    cell: (i) => <span className="f-12-500 text-muted">{fmt(i.getValue())}</span>,
-  },
-  {
-    id: 'actions',
-    header: 'Actions',
-    enableSorting: false,
-    cell: (i) => (
-      <div className="d-flex align-items-center gap-2">
-        <Link
-          href={`/bookings/${i.row.original.id}`}
-          style={{ color: 'var(--primary)', lineHeight: 1 }}>
-          <MdVisibility size={17} />
-        </Link>
-        <button
-        onClick={()=>{setDrawerOpen(true); setEditingBooking(i.row.original)}}
-          style={{
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-            color: 'var(--text-muted)',
-            lineHeight: 1,
-            padding: 0,
-          }}>
-          <MdEdit size={17} />
-        </button>
-      </div>
-    ),
-  },
-],[]);
+  // ── Columns ───────────────────────────────────────────────────────
+  const COLUMNS: ColumnDef<Booking, any>[] = useMemo(
+    () => [
+      {
+        accessorKey: 'ref',
+        header: 'Ref',
+        enableSorting: false,
+        cell: (i) => (
+          <Link
+            href={`/bookings/${i.row.original.id}`}
+            className="f-12-600 text-decoration-none"
+            style={{ color: 'var(--primary)' }}>
+            {i.getValue()}
+          </Link>
+        ),
+      },
+      {
+        accessorKey: 'guest_name',
+        header: 'Guest Name',
+        enableSorting: true,
+        cell: (i) => (
+          <span className="f-12-500" style={{ color: 'var(--text-main)' }}>
+            {i.getValue()}
+          </span>
+        ),
+      },
+      {
+        accessorKey: 'guest_phone',
+        header: 'Phone',
+        enableSorting: false,
+        cell: (i) => <span className="f-12-500 text-muted">{i.getValue()}</span>,
+      },
+      {
+        accessorKey: 'guest_city',
+        header: 'City',
+        enableSorting: true,
+        cell: (i) => <span className="f-12-500 text-muted">{i.getValue()}</span>,
+      },
+      {
+        accessorKey: 'visitor_type',
+        header: 'Visit Type',
+        enableSorting: false,
+        cell: (i) => <span className="f-12-500 text-capitalize text-muted">{i.getValue()}</span>,
+      },
+      {
+        accessorKey: 'check_in',
+        header: 'Check In',
+        enableSorting: true,
+        cell: (i) => (
+          <span className="f-12-500" style={{ color: 'var(--text-main)' }}>
+            {fmt(i.getValue())}
+          </span>
+        ),
+      },
+      {
+        accessorKey: 'check_out',
+        header: 'Check Out',
+        enableSorting: true,
+        cell: (i) => (
+          <span className="f-12-500" style={{ color: 'var(--text-main)' }}>
+            {fmt(i.getValue())}
+          </span>
+        ),
+      },
+      {
+        accessorKey: 'nights',
+        header: 'Nights',
+        enableSorting: true,
+        cell: (i) => <span className="f-12-500 text-muted">{i.getValue()}</span>,
+      },
+      {
+        accessorKey: 'adults',
+        header: 'Adults',
+        enableSorting: false,
+        cell: (i) => <span className="f-12-500 text-muted">{i.getValue()}</span>,
+      },
+      {
+        accessorKey: 'status',
+        header: 'Status',
+        enableSorting: true,
+        cell: (i) => <StatusBadge status={i.getValue()} />,
+      },
+      {
+        accessorKey: 'amount',
+        header: 'Amount',
+        enableSorting: true,
+        cell: (i) => (
+          <span className="f-12-600" style={{ color: 'var(--text-main)' }}>
+            Rs. {Number(i.getValue()).toLocaleString()}
+          </span>
+        ),
+      },
+      {
+        accessorKey: 'amount_paid',
+        header: 'Paid',
+        enableSorting: true,
+        cell: (i) => (
+          <span className="f-12-600 text-success">Rs. {Number(i.getValue()).toLocaleString()}</span>
+        ),
+      },
+      {
+        accessorKey: 'amount_due',
+        header: 'Due',
+        enableSorting: true,
+        cell: (i) => {
+          const due = Number(i.getValue());
+          return (
+            <span className={`f-12-600 ${due > 0 ? 'text-danger' : 'text-success'}`}>
+              Rs. {due.toLocaleString()}
+            </span>
+          );
+        },
+      },
+      {
+        accessorKey: 'created_at',
+        header: 'Created',
+        enableSorting: true,
+        cell: (i) => <span className="f-12-500 text-muted">{fmt(i.getValue())}</span>,
+      },
+      {
+        id: 'actions',
+        header: 'Actions',
+        enableSorting: false,
+        cell: (i) => (
+          <div className="d-flex align-items-center gap-2">
+            <Link
+              href={`/bookings/${i.row.original.id}`}
+              style={{ color: 'var(--primary)', lineHeight: 1 }}>
+              <MdVisibility size={17} />
+            </Link>
+            <button
+              onClick={() => {
+                setDrawerOpen(true);
+                setEditingBooking(i.row.original);
+              }}
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                color: 'var(--text-muted)',
+                lineHeight: 1,
+                padding: 0,
+              }}>
+              <MdEdit size={17} />
+            </button>
+          </div>
+        ),
+      },
+    ],
+    []
+  );
   // Count active filters for badge
   const activeCount = useMemo(
     () => Object.entries(filters).filter(([k, v]) => v !== '' && v !== null).length,
@@ -452,9 +457,13 @@ const COLUMNS: ColumnDef<Booking, any>[] = useMemo(() => [
       <BookingDrawer
         open={drawerOpen}
         booking={editingBooking}
-        onClose={() => setDrawerOpen(false)}
+        onClose={() => {
+          setEditingBooking(null);
+          setDrawerOpen(false);
+        }}
         onSuccess={() => {
           setDrawerOpen(false);
+          setEditingBooking(null);
           qc.invalidateQueries({ queryKey: ['bookings'] });
         }}
       />

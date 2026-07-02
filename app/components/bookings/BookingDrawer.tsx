@@ -47,6 +47,9 @@ interface Booking {
   discount: number;
   amount_paid: number;
   notes: string;
+  rooms: any;
+  actual_check_in: string;
+  actual_check_out: string;
 }
 interface BookingForm {
   guest_name: string;
@@ -60,7 +63,9 @@ interface BookingForm {
   guest_country: string;
   visitor_type: string;
   check_in: string;
+  check_in_time: string;
   check_out: string;
+  check_out_time: string;
   adults: number;
   children: number;
   status: string;
@@ -131,14 +136,17 @@ export default function BookingDrawer({ open, onClose, onSuccess, booking }: Pro
       discount: 0,
       amount_paid: 0,
       rooms_snapshot: [{ room_number: '', amount: 0 }],
-      rooms: [{ room_id: '', amount: 0 }],
+      rooms: [],
       other_charges: [],
+      check_in: '',
+      check_in_time: '14:00',
+      check_out: '',
+      check_out_time: '11:00',
     },
   });
 
   const roomsFieldArray = useFieldArray({ control, name: 'rooms_snapshot' });
   const others = useFieldArray({ control, name: 'other_charges' });
-
   // Watch current snapshot arrays to update UI layout contextively
   const watchedSnapshot = watch('rooms_snapshot');
 
@@ -212,8 +220,27 @@ export default function BookingDrawer({ open, onClose, onSuccess, booking }: Pro
     },
   });
 
-  const onSubmit = (data: BookingForm) => mutation.mutate(data);
-
+  const onSubmit = (data: BookingForm) => {
+    mutation.mutate({
+      ...data,
+      actual_check_in:
+        data.check_in && data.check_in_time ? `${data.check_in} ${data.check_in_time}:00` : null,
+      actual_check_out:
+        data.check_out && data.check_out_time
+          ? `${data.check_out} ${data.check_out_time}:00`
+          : null,
+    });
+  };
+  function toDateInput(value: string | null | undefined): string {
+    if (!value) return '';
+    return value.split('T')[0];
+  }
+  function toTimeInput(value: string | null | undefined): string {
+    if (!value) return '';
+    const timePart = value.includes('T') ? value.split('T')[1] : value.split(' ')[1];
+    if (!timePart) return '';
+    return timePart.slice(0, 5); // "HH:MM"
+  }
   useEffect(() => {
     if (booking) {
       reset({
@@ -227,8 +254,10 @@ export default function BookingDrawer({ open, onClose, onSuccess, booking }: Pro
         guest_address: booking.guest_address,
         guest_country: booking.guest_country,
         visitor_type: booking.visitor_type,
-        check_in: booking.check_in,
-        check_out: booking.check_out,
+        check_in: toDateInput(booking.check_in),
+        check_in_time: booking.actual_check_in ? toTimeInput(booking.actual_check_in) : '14:00',
+        check_out: toDateInput(booking.check_out),
+        check_out_time: booking.actual_check_out ? toTimeInput(booking.actual_check_out) : '11:00',
         adults: booking.adults,
         children: booking.children || 0,
         status: booking.status,
@@ -237,6 +266,8 @@ export default function BookingDrawer({ open, onClose, onSuccess, booking }: Pro
         discount: booking.discount || 0,
         amount_paid: booking.amount_paid || 0,
         notes: booking.notes,
+        rooms:
+          booking?.rooms?.map((r) => ({ room_id: r.room_id, amount: r.price_per_night })) || [],
       });
     } else {
       reset({
@@ -373,9 +404,11 @@ export default function BookingDrawer({ open, onClose, onSuccess, booking }: Pro
             </div>
 
             {/* ── Stay Details ─────────────────────────────────── */}
+            {/* ── Stay Details ─────────────────────────────────── */}
             <Section title="Stay Details" />
 
             <div className="row g-3">
+              {/* Check In date + time */}
               <div className="col-6">
                 <Field label="Check In *" error={errors.check_in?.message}>
                   <input
@@ -386,6 +419,13 @@ export default function BookingDrawer({ open, onClose, onSuccess, booking }: Pro
                 </Field>
               </div>
               <div className="col-6">
+                <Field label="Check In Time">
+                  <input type="time" className="form-control" {...register('check_in_time')} />
+                </Field>
+              </div>
+
+              {/* Check Out date + time */}
+              <div className="col-6">
                 <Field label="Check Out *" error={errors.check_out?.message}>
                   <input
                     type="date"
@@ -394,6 +434,12 @@ export default function BookingDrawer({ open, onClose, onSuccess, booking }: Pro
                   />
                 </Field>
               </div>
+              <div className="col-6">
+                <Field label="Check Out Time">
+                  <input type="time" className="form-control" {...register('check_out_time')} />
+                </Field>
+              </div>
+
               <div className="col-4">
                 <Field label="Adults">
                   <input
@@ -416,7 +462,7 @@ export default function BookingDrawer({ open, onClose, onSuccess, booking }: Pro
               </div>
               <div className="col-4">
                 <Field label="Status">
-                  <select className="form-select form-select" {...register('status')}>
+                  <select className="form-select" {...register('status')}>
                     {['reserved', 'checked_in', 'checked_out', 'cancelled'].map((s) => (
                       <option key={s} value={s} className="text-capitalize">
                         {s.replace('_', ' ')}

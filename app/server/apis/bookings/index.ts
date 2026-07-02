@@ -30,6 +30,10 @@ export const GetBookings = ({ page, limit, filters, sort }: {page:number, limit:
     page,
     limit,
     sort: JSON.stringify(sort || { created_at: 'desc' }),
+    include: JSON.stringify([{
+      name:'rooms',
+      select:[]
+    }]),
   };
 
   const { isLoading, data, error, refetch } = useQuery({

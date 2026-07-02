@@ -109,7 +109,7 @@ import NetworkStatus from './components/NetworkStatus';
 
 
 export const metadata: Metadata = {
-  title: 'Engage Web',
+  title: 'HMS',
 };
 
 export default function RootLayout({
