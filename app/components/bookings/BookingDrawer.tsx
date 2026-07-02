@@ -194,17 +194,23 @@ export default function BookingDrawer({ open, onClose, onSuccess, booking }: Pro
     return () => window.removeEventListener('keydown', handler);
   }, [onClose]);
 
-const mutation = useMutation({
-  mutationFn: async (data: BookingForm) => {
-    if (isEdit && booking) {
-      const { data: res }: any = await PATCH_REQUEST(BOOKINGS.INDEX+'/'+booking.id, data);
+  const mutation = useMutation({
+    mutationFn: async (data: BookingForm) => {
+      if (isEdit && booking) {
+        const { data: res }: any = await PATCH_REQUEST(BOOKINGS.INDEX + '/' + booking.id, data);
+        return res;
+      }
+      const { data: res }: any = await POST_REQUEST(BOOKINGS.INDEX, data);
       return res;
-    }
-    const { data: res }: any = await POST_REQUEST(BOOKINGS.INDEX, data);
-    return res;
-  },
-  onSuccess: () => { reset(); onSuccess(); },
-});
+    },
+    onSuccess: () => {
+      reset();
+      onSuccess();
+    },
+    onError: (err: any) => {
+      Toast.error('Error', err?.response?.data?.message || 'Failed to save booking');
+    },
+  });
 
   const onSubmit = (data: BookingForm) => mutation.mutate(data);
 
@@ -224,12 +230,12 @@ const mutation = useMutation({
         check_in: booking.check_in,
         check_out: booking.check_out,
         adults: booking.adults,
-        children: booking.children,
+        children: booking.children || 0,
         status: booking.status,
         rooms_snapshot: booking.rooms_snapshot ?? [{ room_number: '', amount: 0 }],
         other_charges: booking.other_charges ?? [],
-        discount: booking.discount,
-        amount_paid: booking.amount_paid,
+        discount: booking.discount || 0,
+        amount_paid: booking.amount_paid || 0,
         notes: booking.notes,
       });
     } else {
@@ -521,7 +527,7 @@ const mutation = useMutation({
                 border: '1px dashed var(--primary)',
                 borderRadius: 6,
               }}>
-              <MdAdd size={15} /> 'Add room'
+              <MdAdd size={15} /> Add room
             </button>
 
             {/* ── Other Charges ─────────────────────────────────── */}
