@@ -1,7 +1,7 @@
 // app/(dashboard)/rooms/page.tsx
 'use client';
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { ColumnDef } from '@tanstack/react-table';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
@@ -51,6 +51,7 @@ interface RoomFilters {
   price_min: string;
   price_max: string;
   floor: string;
+  room_type: string;
 }
 
 const DEFAULT_FILTERS: RoomFilters = {
@@ -60,6 +61,7 @@ const DEFAULT_FILTERS: RoomFilters = {
   price_min: '',
   price_max: '',
   floor: '',
+  room_type: '',
 };
 
 export default function RoomsPage() {
@@ -67,9 +69,20 @@ export default function RoomsPage() {
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(15);
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState(search);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editRoom, setEditRoom] = useState<Room | null>(null);
   const [filters, setFilters] = useState<RoomFilters>(DEFAULT_FILTERS);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 500);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [search]);
+  
   const columns: ColumnDef<Room, any>[] = useMemo(
     () => [
       {
@@ -221,9 +234,16 @@ export default function RoomsPage() {
       conditions.push({ field: 'capacity', op: '<=', value: Number(filters.capacity_max) });
     if (filters.floor)
       conditions.push({ field: 'floor', op: '=', value: filters.floor });
-
+    if (filters.room_type)
+      conditions.push({ field: 'room_type', op: '=', value: filters.room_type });
+    if (debouncedSearch)
+      conditions.push({
+        field: 'room_number',
+        op: '_like_',
+        value: `%${debouncedSearch}%`,
+      });
     return conditions.length ? { AND: conditions } : {};
-  }, [filters]);
+  }, [filters, debouncedSearch]);
 
   const { data, isLoading, meta } = GetRooms({
     page,
@@ -317,6 +337,21 @@ export default function RoomsPage() {
                 { label: 'Ground', value: '0' },
                 { label: '1st', value: '1' },
                 { label: '2nd', value: '2' },
+              ]}
+            />
+            <FilterSelect
+              label="Room Type"
+              value={filters.room_type}
+              onChange={(v) => {
+                setFilters((f) => ({ ...f, room_type: v }));
+                setPage(1);
+              }}
+              options={[
+                { label: 'Standard', value: 'standard' },
+                { label: 'VIP', value: 'vip' },
+                { label: 'Shop', value: 'shop' },
+                { label: 'Suite', value: 'suite' },
+
               ]}
             />
 
