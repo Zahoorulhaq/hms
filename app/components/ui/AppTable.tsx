@@ -79,6 +79,7 @@ export default function AppTable<T>({
         overflowY: 'visible',
         WebkitOverflowScrolling: 'touch',
         maxWidth: '100%', // ← never exceeds parent
+        minHeight:'30vh'
       }}>
       <table
         className="table table-hover mb-0"

@@ -1,0 +1,38 @@
+/* Container must be relative so tooltip doesn't break out of the table row weirdly */
+
+.guest-tooltip-container {
+    position: relative;
+}
+
+
+/* Hide tooltip by default */
+
+.guest-tooltip-container .guest-tooltip-content {
+    display: none;
+    z-index: 1050;
+    /* Sits cleanly on top of other elements */
+    width: 220px;
+    left: 0;
+    top: 0;
+    margin-top: 5px;
+    height: 22vh;
+    overflow-y: scroll;
+}
+
+
+/* Show tooltip content smoothly on hover */
+
+.guest-tooltip-container:hover .guest-tooltip-content {
+    display: block;
+}
+
+
+/* Optional styling alignments */
+
+.f-11 {
+    font-size: 11px;
+}
+
+.last-mb-0:last-child {
+    margin-bottom: 0 !important;
+}

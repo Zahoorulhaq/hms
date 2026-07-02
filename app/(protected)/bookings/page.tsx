@@ -15,7 +15,7 @@ import type { PaginationMeta } from '@/components/ui/Pagination';
 import { MdEdit, MdVisibility } from 'react-icons/md';
 import { GetRooms } from '@/server/apis/rooms';
 import { GetBookings } from '@/server/apis/bookings';
-
+import './page.scss';
 // ── Types & helpers (same as before) ─────────────────────────────
 interface Booking {
   id: number;
@@ -39,9 +39,10 @@ interface Booking {
   discount: number;
   amount_paid: number;
   notes: string;
-  rooms:any;
-  actual_check_in:string;
-  actual_check_out:string
+  rooms: any;
+  actual_check_in: string;
+  actual_check_out: string;
+  additional_guests: any;
 }
 
 const STATUS_MAP: Record<string, { label: string; bg: string; color: string }> = {
@@ -120,11 +121,62 @@ export default function BookingsPage() {
         accessorKey: 'guest_name',
         header: 'Guest Name',
         enableSorting: true,
-        cell: (i) => (
-          <span className="f-12-500" style={{ color: 'var(--text-main)' }}>
-            {i.getValue()}
-          </span>
-        ),
+        cell: (i) => {
+          const additionalGuests = i.row.original.additional_guests || [];
+
+          return (
+            <div className="position-relative d-inline-block guest-tooltip-container">
+              <div className=" text-decoration-none text-black cursor-pointer  position-relative">
+                {i.getValue()}
+                 {additionalGuests.length > 0 && (
+                <span
+                  className="badge rounded-pill f-10-600 px-1"
+                  style={{
+                    backgroundColor: 'var(--primary-light, #e0f2fe)',
+                    color: 'var(--primary, #0284c7)',
+                    width: 10,
+                    height: 10,
+                    position: 'absolute',
+                    top: 2,
+                    left: '100%',
+                    display: 'block',
+                  }}>
+                </span>
+              )}
+              </div>
+              {/* Notification Badge */}
+             
+
+              {/* Tooltip Popup */}
+              {additionalGuests.length > 0 && (
+                <div className="guest-tooltip-content p-3 rounded shadow-sm bg-white border position-absolute">
+                  <h6 className="f-12-600 border-bottom pb-1 mb-2 text-dark">Additional Guests</h6>
+                  {additionalGuests.map((guest: any, index: number) => (
+                    <div key={index} className="mb-2 last-mb-0 f-11 text-muted">
+                      <div className="d-flex justify-content-between gap-3">
+                        <span className="fw-bold text-secondary">Name:</span>
+                        <span className="text-dark">{guest.name || '--'}</span>
+                      </div>
+                      <div className="d-flex justify-content-between gap-3">
+                        <span className="fw-bold text-secondary">Relation:</span>
+                        <span className="text-dark">{guest.relation || '--'}</span>
+                      </div>
+                      <div className="d-flex justify-content-between gap-3">
+                        <span className="fw-bold text-secondary">Phone:</span>
+                        <span className="text-dark">{guest.phone || '--'}</span>
+                      </div>
+                      <div className="d-flex justify-content-between gap-3">
+                        <span className="fw-bold text-secondary">NIC:</span>
+                        <span className="text-dark">{guest.nic || '--'}</span>
+                      </div>
+                      {index < additionalGuests.length - 1 && <hr className="my-1 opacity-25" />}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        },
       },
       {
         accessorKey: 'guest_phone',
@@ -150,7 +202,11 @@ export default function BookingsPage() {
         enableSorting: true,
         cell: (i) => (
           <>
-          {i.getValue()?.map(e=>(<span key={e.id} className="f-12-500 text-main ms-1 rounded-2 general-border px-2">{e.room_number}</span>))}
+            {i.getValue()?.map((e) => (
+              <span key={e.id} className="f-12-500 text-main ms-1 rounded-2 general-border px-2">
+                {e.room_number}
+              </span>
+            ))}
           </>
         ),
       },

@@ -10,7 +10,23 @@ import { GetRooms } from '@/server/apis/rooms';
 import Dropdown, { DropdownItem, DropdownSection } from '../ui/Dropdown';
 import { BOOKINGS } from '@/server/endpoints';
 import { PATCH_REQUEST, POST_REQUEST, PUT_REQUEST } from '@/server/https';
-
+const RELATIONS = [
+  'Wife',
+  'Husband',
+  'Father',
+  'Mother',
+  'Son',
+  'Daughter',
+  'Brother',
+  'Sister',
+  'Friend',
+  'Colleague',
+  'Uncle',
+  'Aunt',
+  'Grandfather',
+  'Grandmother',
+  'Other',
+];
 // ── Types ─────────────────────────────────────────────────────────
 interface RoomRow {
   room_number: string;
@@ -24,6 +40,12 @@ interface RoomPivotRow {
 interface OtherCharge {
   name: string;
   amount: number;
+}
+interface AdditionalGuest {
+  name: string;
+  relation: string;
+  nic: string;
+  phone: string;
 }
 interface Booking {
   id: number;
@@ -50,6 +72,7 @@ interface Booking {
   rooms: any;
   actual_check_in: string;
   actual_check_out: string;
+  additional_guests: AdditionalGuest[];
 }
 interface BookingForm {
   guest_name: string;
@@ -75,6 +98,7 @@ interface BookingForm {
   discount: number;
   amount_paid: number;
   notes: string;
+  additional_guests: AdditionalGuest[];
 }
 
 interface Props {
@@ -142,13 +166,20 @@ export default function BookingDrawer({ open, onClose, onSuccess, booking }: Pro
       check_in_time: '14:00',
       check_out: '',
       check_out_time: '11:00',
+      additional_guests: [],
     },
   });
 
   const roomsFieldArray = useFieldArray({ control, name: 'rooms_snapshot' });
+  const additionalGuests = useFieldArray({ control, name: 'additional_guests' });
+  const aditionGuestVal = watch('additional_guests');
+  const visitorType = watch('visitor_type');
   const others = useFieldArray({ control, name: 'other_charges' });
   // Watch current snapshot arrays to update UI layout contextively
   const watchedSnapshot = watch('rooms_snapshot');
+  useEffect(() => {
+    setValue('adults', aditionGuestVal?.length ? aditionGuestVal?.length + 1 : 1);
+  }, [aditionGuestVal]);
 
   // Fetch active inventory items natively
   const { data: roomsData, isLoading } = GetRooms({ filters: {} });
@@ -203,7 +234,7 @@ export default function BookingDrawer({ open, onClose, onSuccess, booking }: Pro
   }, [onClose]);
 
   const mutation = useMutation({
-    mutationFn: async (data: BookingForm) => {
+    mutationFn: async (data: any) => {
       if (isEdit && booking) {
         const { data: res }: any = await PATCH_REQUEST(BOOKINGS.INDEX + '/' + booking.id, data);
         return res;
@@ -223,6 +254,7 @@ export default function BookingDrawer({ open, onClose, onSuccess, booking }: Pro
   const onSubmit = (data: BookingForm) => {
     mutation.mutate({
       ...data,
+      children: data.children || 0,
       actual_check_in:
         data.check_in && data.check_in_time ? `${data.check_in} ${data.check_in_time}:00` : null,
       actual_check_out:
@@ -268,6 +300,7 @@ export default function BookingDrawer({ open, onClose, onSuccess, booking }: Pro
         notes: booking.notes,
         rooms:
           booking?.rooms?.map((r) => ({ room_id: r.room_id, amount: r.price_per_night })) || [],
+        additional_guests: booking.additional_guests ?? [],
       });
     } else {
       reset({
@@ -403,7 +436,155 @@ export default function BookingDrawer({ open, onClose, onSuccess, booking }: Pro
               </div>
             </div>
 
-            {/* ── Stay Details ─────────────────────────────────── */}
+            {/* ── Additional Guests ────────────────────────────────── */}
+            {visitorType!=="single"&&<>
+            <Section title="Additional Guests" />
+            {additionalGuests.fields.map((field, idx) => (
+              <div
+                key={field.id}
+                className="rounded-3 p-3 mb-3"
+                style={{
+                  border: '1px solid var(--border-color)',
+                  background: 'var(--primary-bg)',
+                }}>
+                {/* Guest header */}
+                <div className="d-flex justify-content-between align-items-center mb-3">
+                  <span className="f-12-600" style={{ color: 'var(--text-main)' }}>
+                    Guest #{idx + 1}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => additionalGuests.remove(idx)}
+                    className="btn btn-sm d-flex align-items-center gap-1 f-12-500"
+                    style={{
+                      color: 'var(--danger)',
+                      background: '#ffebee',
+                      border: 'none',
+                      borderRadius: 6,
+                    }}>
+                    <MdDelete size={14} /> Remove
+                  </button>
+                </div>
+
+                <div className="row g-2">
+                  {/* Name */}
+                  <div className="col-6">
+                    <label className="form-label f-12-600" style={{ color: 'var(--text-main)' }}>
+                      Full Name *
+                    </label>
+                    <input
+                      className="form-control form-control-sm"
+                      placeholder="Guest name"
+                      {...register(`additional_guests.${idx}.name`, { required: true })}
+                    />
+                    {errors.additional_guests?.[idx]?.name && (
+                      <div className="text-danger f-12-500 mt-1">Required</div>
+                    )}
+                  </div>
+
+                  {/* Relation dropdown */}
+                  <div className="col-6">
+                    <label className="form-label f-12-600" style={{ color: 'var(--text-main)' }}>
+                      Relation *
+                    </label>
+                    <Dropdown
+                      align="left"
+                      minWidth={200}
+                      trigger={
+                        <div
+                          className="form-control form-control-sm d-flex justify-content-between align-items-center"
+                          style={{ cursor: 'pointer' }}>
+                          <span
+                            className={
+                              watch(`additional_guests.${idx}.relation`) ? '' : 'text-muted'
+                            }>
+                            {watch(`additional_guests.${idx}.relation`) || 'Select relation'}
+                          </span>
+                          <MdArrowDropDown size={16} className="text-muted" />
+                        </div>
+                      }>
+                      {(close: () => void) => (
+                        <DropdownSection>
+                          {RELATIONS.map((rel) => (
+                            <DropdownItem
+                              key={rel}
+                              active={watch(`additional_guests.${idx}.relation`) === rel}
+                              onClick={() => {
+                                setValue(`additional_guests.${idx}.relation`, rel);
+                                close();
+                              }}>
+                              {rel}
+                            </DropdownItem>
+                          ))}
+                        </DropdownSection>
+                      )}
+                    </Dropdown>
+                    {/* Hidden input for validation */}
+                    <input
+                      type="hidden"
+                      {...register(`additional_guests.${idx}.relation`, { required: true })}
+                    />
+                    {errors.additional_guests?.[idx]?.relation && (
+                      <div className="text-danger f-12-500 mt-1">Required</div>
+                    )}
+                  </div>
+
+                  {/* NIC — optional */}
+                  <div className="col-6">
+                    <label className="form-label f-12-600" style={{ color: 'var(--text-main)' }}>
+                      NIC / Passport
+                      <span className="text-muted fw-normal ms-1">(optional)</span>
+                    </label>
+                    <input
+                      className="form-control form-control-sm"
+                      placeholder="e.g. 35202-1234567-1"
+                      {...register(`additional_guests.${idx}.nic`)}
+                    />
+                  </div>
+
+                  {/* Phone — optional */}
+                  <div className="col-6">
+                    <label className="form-label f-12-600" style={{ color: 'var(--text-main)' }}>
+                      Phone
+                      <span className="text-muted fw-normal ms-1">(optional)</span>
+                    </label>
+                    <input
+                      className="form-control form-control-sm"
+                      placeholder="e.g. 0300-1234567"
+                      {...register(`additional_guests.${idx}.phone`)}
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+            {/* Add guest button */}
+            <button
+              type="button"
+              onClick={() =>
+                additionalGuests.append({
+                  name: '',
+                  relation: '',
+                  nic: '',
+                  phone: '',
+                })
+              }
+              className="btn btn-sm d-flex align-items-center gap-1 f-12-600 mb-2"
+              style={{
+                color: 'var(--primary)',
+                background: 'var(--primary-bg)',
+                border: '1px dashed var(--primary)',
+                borderRadius: 6,
+              }}>
+              <MdAdd size={15} /> Add Guest
+            </button>
+            {additionalGuests.fields.length === 0 && (
+              <p className="f-12-500 text-muted mb-3">
+                No additional guests added. Click below to add.
+              </p>
+            )}
+            </>}
+
+            
             {/* ── Stay Details ─────────────────────────────────── */}
             <Section title="Stay Details" />
 
@@ -450,16 +631,17 @@ export default function BookingDrawer({ open, onClose, onSuccess, booking }: Pro
                   />
                 </Field>
               </div>
-              <div className="col-4">
-                <Field label="Children">
-                  <input
-                    type="number"
-                    min={0}
-                    className="form-control"
+              {visitorType !== "single" && (
+                <div className="col-4">
+                  <Field label="Children">
+                    <input
+                      type="number"
+                      min={0}
+                      className="form-control"
                     {...register('children', { valueAsNumber: true, min: 0 })}
                   />
                 </Field>
-              </div>
+              </div>)}
               <div className="col-4">
                 <Field label="Status">
                   <select className="form-select" {...register('status')}>

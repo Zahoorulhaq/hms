@@ -21,9 +21,7 @@ export const GetPays = ({ filters, sort }: { filters: any, sort?:any }) => {
   return { isLoading, data, error, refetch };
 };
 export const GetBookings = ({ page, limit, filters, sort }: {page:number, limit:number, filters: any, sort?:any }) => {
-  console.log('====================================');
-  console.log(filters);
-  console.log('====================================');
+
   // Only send filter — no select, no group, no include
   const params = {
     filter: filters,
