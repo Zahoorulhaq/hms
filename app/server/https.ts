@@ -81,11 +81,6 @@ http.interceptors.response.use(
           autoClose: 500,
         });
         storage.removeItem('nextauth.message');
-        storage.removeItem('leadHistory');
-        storage.removeItem('listingHistory');
-        storage.removeItem('contactsHistory');
-        storage.removeItem('propertyHistory');
-        storage.removeItem('activityHistory');
       } else {
         window.location.href = `/error?error=${statusCode}`; // Navigate to error page
       }

@@ -335,7 +335,7 @@ export default function BookingsPage() {
     if (filters.visitor_type)
       conditions.push({ field: 'visitor_type', op: '=', value: filters.visitor_type });
     if (filters.room_id)
-      conditions.push({ field: 'room_id', op: '=', value: Number(filters.room_id) });
+      conditions.push({ field: 'rooms_snapshot->room_number', op: 'json_contains', value: Number(filters.room_id) });
     if (filters.date_from)
       conditions.push({
         field: 'check_in',

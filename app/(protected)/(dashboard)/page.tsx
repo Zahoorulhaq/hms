@@ -8,6 +8,7 @@ import ProfitSummary from '@/components/dashboard/ProfitSummary';
 import OverView from '@/components/dashboard/OverView';
 import { BookingChart } from '@/server/apis/bookings';
 import { useState } from 'react';
+import { useUser } from '@/providers/UserProvider';
 
 // 🔁 Replace with real API data later
 const MOCK_STATS = {
@@ -29,11 +30,8 @@ const MOCK_CHART_DATA = [
 export default function DashboardPage() {
   const { totalBookingRevenue, totalExpenses, totalBookings } = MOCK_STATS;
   const [year, setYear] = useState(new Date().getFullYear());
- const {
-    data,
-    isLoading,
-    refetch,
-  } = BookingChart(year);
+  const user = useUser()?.data;
+  const { data, isLoading, refetch } = BookingChart(year);
   return (
     <div>
       {/* Page title */}
@@ -43,24 +41,28 @@ export default function DashboardPage() {
           Overview of your hotel performance
         </p> */}
       </div>
-      <OverView />
-      {/* Chart + Profit Summary */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr 320px',
-          gap: 16,
-          alignItems: 'start',
-        }}>
-        <BookingsChart data={data??[]} year={year} setYear={setYear} />
-        {/* <StatCard
+      {user?.role === 'admin' && (
+        <>
+          <OverView />
+          {/* Chart + Profit Summary */}
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 320px',
+              gap: 16,
+              alignItems: 'start',
+            }}>
+            <BookingsChart data={data ?? []} year={year} setYear={setYear} />
+            {/* <StatCard
           title="Total Bookings"
           value={totalBookings}
           subtitle="All time bookings"
           icon={<MdHotel size={24} />}
           color="var(--primary-light)"
         /> */}
-      </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }
