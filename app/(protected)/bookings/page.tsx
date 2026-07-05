@@ -16,6 +16,7 @@ import { MdEdit, MdVisibility } from 'react-icons/md';
 import { GetRooms } from '@/server/apis/rooms';
 import { GetBookings } from '@/server/apis/bookings';
 import './page.scss';
+import moment from 'moment';
 // ── Types & helpers (same as before) ─────────────────────────────
 interface Booking {
   id: number;
@@ -216,7 +217,7 @@ export default function BookingsPage() {
         enableSorting: true,
         cell: (i) => (
           <span className="f-12-500" style={{ color: 'var(--text-main)' }}>
-            {fmt(i.getValue())}
+            {fmt(i.getValue())}({moment(i.row.original.actual_check_in).format('hh:mm A')})
           </span>
         ),
       },
@@ -226,7 +227,7 @@ export default function BookingsPage() {
         enableSorting: true,
         cell: (i) => (
           <span className="f-12-500" style={{ color: 'var(--text-main)' }}>
-            {fmt(i.getValue())}
+            {fmt(i.getValue())}({moment(i.row.original.actual_check_out).format('hh:mm A')})
           </span>
         ),
       },
