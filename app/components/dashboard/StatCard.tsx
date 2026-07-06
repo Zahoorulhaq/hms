@@ -21,7 +21,7 @@ export default function StatCard({
   loading = false,
 }: StatCardProps) {
   return (
-    <div className="bg-white rounded-2 py-3 px-3 d-flex align-items-center gap-2 general-border general-box-shadow">
+    <div className="bg-white rounded-2 py-3 px-3 d-flex align-items-center gap-2 general-border general-box-shadow h-100">
       {/* Icon */}
       <div
         style={{

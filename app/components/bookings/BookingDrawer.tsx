@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { useMutation } from '@tanstack/react-query';
 import { MdClose, MdAdd, MdDelete, MdArrowDropDown } from 'react-icons/md';
@@ -49,6 +49,7 @@ interface AdditionalGuest {
   relation: string;
   nic: string;
   phone: string;
+  gender: string;
 }
 interface Booking {
   id: number;
@@ -75,10 +76,12 @@ interface Booking {
   rooms: any;
   actual_check_in: string;
   actual_check_out: string;
+  guest_gender: string;
   additional_guests: AdditionalGuest[];
 }
 interface BookingForm {
   guest_name: string;
+  guest_gender;
   guest_father_name: string;
   guest_nic: string;
   guest_phone: string;
@@ -144,6 +147,15 @@ function Field({
 
 export default function BookingDrawer({ open, onClose, onSuccess, booking }: Props) {
   const overlayRef = useRef<HTMLDivElement>(null);
+  const [roomQuery, setRoomQuery] = useState('');
+  const [debouncedRoomQuery, setDebouncedRoomQuery] = useState(roomQuery);
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedRoomQuery(roomQuery);
+    }, 300);
+
+    return () => clearTimeout(handler);
+  }, [roomQuery]);
 
   const {
     register,
@@ -169,6 +181,7 @@ export default function BookingDrawer({ open, onClose, onSuccess, booking }: Pro
       check_in_time: '14:00',
       check_out: '',
       check_out_time: '11:00',
+      guest_gender: '',
       additional_guests: [],
     },
   });
@@ -185,7 +198,11 @@ export default function BookingDrawer({ open, onClose, onSuccess, booking }: Pro
   }, [aditionGuestVal]);
 
   // Fetch active inventory items natively
-  const { data: roomsData, isLoading } = GetRooms({ filters: {} });
+  const { data: roomsData, isLoading } = GetRooms({ filters: {
+    AND: [
+      ...(debouncedRoomQuery ? [{ field: 'room_number', op: '_like_', value: debouncedRoomQuery }] : [])
+    ]
+  } });
   const availableRooms = roomsData || [];
 
   // Sync snapshot append and delete variants to primary matching pivot records
@@ -280,6 +297,7 @@ export default function BookingDrawer({ open, onClose, onSuccess, booking }: Pro
     if (booking) {
       reset({
         guest_name: booking.guest_name,
+        guest_gender: booking.guest_gender ?? 'male',
         guest_father_name: booking.guest_father_name,
         guest_nic: booking.guest_nic,
         guest_phone: booking.guest_phone,
@@ -315,428 +333,278 @@ export default function BookingDrawer({ open, onClose, onSuccess, booking }: Pro
   if (!open) return null;
 
   return (
-     <Drawer
-      open     ={open}
-      onClose  ={onClose}
-      title    ={isEdit ? `Edit Booking — ${booking?.guest_name}` : 'New Booking'}
-      subtitle ="Fill in guest and stay details"
-      width    ="clamp(320px, 50vw, 680px)"
-      footer   ={
+    <Drawer
+      open={open}
+      onClose={onClose}
+      title={isEdit ? `Edit Booking — ${booking?.guest_name}` : 'New Booking'}
+      subtitle="Fill in guest and stay details"
+      width="clamp(320px, 50vw, 680px)"
+      footer={
         <DrawerFooter
-          onCancel    ={onClose}
-          formId      ="booking-form"
-          submitLabel ={mutation.isPending ? 'Saving…' : isEdit ? 'Update Booking' : 'Save Booking'}
-          loading     ={mutation.isPending}
+          onCancel={onClose}
+          formId="booking-form"
+          submitLabel={mutation.isPending ? 'Saving…' : isEdit ? 'Update Booking' : 'Save Booking'}
+          loading={mutation.isPending}
         />
-      }
-    >
-          <form id="booking-form" onSubmit={handleSubmit(onSubmit)}>
-            {/* ── Guest Info ──────────────────────────────────── */}
-            <Section title="Guest Information" />
+      }>
+      <form id="booking-form" onSubmit={handleSubmit(onSubmit)}>
+        {/* ── Guest Info ──────────────────────────────────── */}
+        <Section title="Guest Information" />
 
-            <div className="row g-3">
-              <div className="col-6">
-                <Field label="Full Name *" error={errors.guest_name?.message}>
-                  <input
-                    className="form-control"
-                    {...register('guest_name', { required: 'Required' })}
-                  />
-                </Field>
-              </div>
-              <div className="col-6">
-                <Field label="Father Name">
-                  <input className="form-control" {...register('guest_father_name')} />
-                </Field>
-              </div>
-              <div className="col-6">
-                <Field label="NIC / Passport">
-                  <input className="form-control" {...register('guest_nic')} />
-                </Field>
-              </div>
-              <div className="col-6">
-                <Field label="Phone *" error={errors.guest_phone?.message}>
-                  <input
-                    className="form-control"
-                    {...register('guest_phone', { required: 'Required' })}
-                  />
-                </Field>
-              </div>
-              <div className="col-6">
-                <Field label="Profession">
-                  <input className="form-control" {...register('guest_profession')} />
-                </Field>
-              </div>
-              <div className="col-6">
-                <Field label="Purpose">
-                  <input className="form-control" {...register('guest_purpose')} />
-                </Field>
-              </div>
-              <div className="col-6">
-                <Field label="City">
-                  <input className="form-control" {...register('guest_city')} />
-                </Field>
-              </div>
-              <div className="col-6">
-                <Field label="Country">
-                  <input className="form-control" {...register('guest_country')} />
-                </Field>
-              </div>
-              <div className="col-12">
-                <Field label="Address">
-                  <input className="form-control" {...register('guest_address')} />
-                </Field>
-              </div>
-              <div className="col-6">
-                <Field label="Visitor Type">
-                  <select className="form-select form-select" {...register('visitor_type')}>
-                    {['single', 'family', 'friends', 'clients'].map((t) => (
-                      <option key={t} value={t} className="text-capitalize">
-                        {t}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
-              </div>
-            </div>
-
-            {/* ── Additional Guests ────────────────────────────────── */}
-            {visitorType !== 'single' && (
-              <>
-                <Section title="Additional Guests" />
-                {additionalGuests.fields.map((field, idx) => (
-                  <div
-                    key={field.id}
-                    className="rounded-3 p-3 mb-3"
-                    style={{
-                      border: '1px solid var(--border-color)',
-                      background: 'var(--primary-bg)',
-                    }}>
-                    {/* Guest header */}
-                    <div className="d-flex justify-content-between align-items-center mb-3">
-                      <span className="f-12-600" style={{ color: 'var(--text-main)' }}>
-                        Guest #{idx + 1}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => additionalGuests.remove(idx)}
-                        className="btn btn-sm d-flex align-items-center gap-1 f-12-500"
-                        style={{
-                          color: 'var(--danger)',
-                          background: '#ffebee',
-                          border: 'none',
-                          borderRadius: 6,
-                        }}>
-                        <MdDelete size={14} /> Remove
-                      </button>
-                    </div>
-
-                    <div className="row g-2">
-                      {/* Name */}
-                      <div className="col-6">
-                        <label
-                          className="form-label f-12-600"
-                          style={{ color: 'var(--text-main)' }}>
-                          Full Name *
-                        </label>
-                        <input
-                          className="form-control form-control-sm"
-                          placeholder="Guest name"
-                          {...register(`additional_guests.${idx}.name`, { required: true })}
-                        />
-                        {errors.additional_guests?.[idx]?.name && (
-                          <div className="text-danger f-12-500 mt-1">Required</div>
-                        )}
-                      </div>
-
-                      {/* Father Name — optional */}
-                      <div className="col-6">
-                        <label
-                          className="form-label f-12-600"
-                          style={{ color: 'var(--text-main)' }}>
-                          Father Name
-                          <span className="text-muted fw-normal ms-1">(optional)</span>
-                        </label>
-                        <input
-                          className="form-control form-control-sm"
-                          placeholder="Father's name"
-                          {...register(`additional_guests.${idx}.father_name`)}
-                        />
-                      </div>
-
-                      {/* Relation dropdown */}
-                      <div className="col-6">
-                        <label
-                          className="form-label f-12-600"
-                          style={{ color: 'var(--text-main)' }}>
-                          Relation *
-                        </label>
-                        <Dropdown
-                          align="left"
-                          minWidth={200}
-                          trigger={
-                            <div
-                              className="form-control form-control-sm d-flex justify-content-between align-items-center"
-                              style={{ cursor: 'pointer' }}>
-                              <span
-                                className={
-                                  watch(`additional_guests.${idx}.relation`) ? '' : 'text-muted'
-                                }>
-                                {watch(`additional_guests.${idx}.relation`) || 'Select relation'}
-                              </span>
-                              <MdArrowDropDown size={16} className="text-muted" />
-                            </div>
-                          }>
-                          {(close: () => void) => (
-                            <DropdownSection>
-                              {RELATIONS.map((rel) => (
-                                <DropdownItem
-                                  key={rel}
-                                  active={watch(`additional_guests.${idx}.relation`) === rel}
-                                  onClick={() => {
-                                    setValue(`additional_guests.${idx}.relation`, rel);
-                                    close();
-                                  }}>
-                                  {rel}
-                                </DropdownItem>
-                              ))}
-                            </DropdownSection>
-                          )}
-                        </Dropdown>
-                        {/* Hidden input for validation */}
-                        <input
-                          type="hidden"
-                          {...register(`additional_guests.${idx}.relation`, { required: true })}
-                        />
-                        {errors.additional_guests?.[idx]?.relation && (
-                          <div className="text-danger f-12-500 mt-1">Required</div>
-                        )}
-                      </div>
-
-                      {/* NIC — optional */}
-                      <div className="col-6">
-                        <label
-                          className="form-label f-12-600"
-                          style={{ color: 'var(--text-main)' }}>
-                          NIC / Passport
-                          <span className="text-muted fw-normal ms-1">(optional)</span>
-                        </label>
-                        <input
-                          className="form-control form-control-sm"
-                          placeholder="e.g. 35202-1234567-1"
-                          {...register(`additional_guests.${idx}.nic`)}
-                        />
-                      </div>
-
-                      {/* Phone — optional */}
-                      <div className="col-6">
-                        <label
-                          className="form-label f-12-600"
-                          style={{ color: 'var(--text-main)' }}>
-                          Phone
-                          <span className="text-muted fw-normal ms-1">(optional)</span>
-                        </label>
-                        <input
-                          className="form-control form-control-sm"
-                          placeholder="e.g. 0300-1234567"
-                          {...register(`additional_guests.${idx}.phone`)}
-                        />
-                      </div>
-                    </div>
-                  </div>
+        <div className="row g-3">
+          <div className="col-6">
+            <Field label="Full Name *" error={errors.guest_name?.message}>
+              <input
+                className="form-control"
+                {...register('guest_name', { required: 'Required' })}
+              />
+            </Field>
+          </div>
+          <div className="col-6">
+            <Field label="Gender">
+              <div className="d-flex gap-3 mt-1">
+                {['male', 'female'].map((g) => (
+                  <label
+                    key={g}
+                    className="d-flex align-items-center gap-2 f-12-500 text-capitalize"
+                    style={{ cursor: 'pointer', color: 'var(--text-main)' }}>
+                    <input
+                      type="radio"
+                      value={g}
+                      {...register('guest_gender')}
+                      style={{ accentColor: 'var(--primary)' }}
+                    />
+                    {g}
+                  </label>
                 ))}
-                {/* Add guest button */}
-                <button
-                  type="button"
-                  onClick={() =>
-                    additionalGuests.append({
-                      name: '',
-                      relation: '',
-                      nic: '',
-                      phone: '',
-                      father_name: '',
-                    })
-                  }
-                  className="btn btn-sm d-flex align-items-center gap-1 f-12-600 mb-2"
-                  style={{
-                    color: 'var(--primary)',
-                    background: 'var(--primary-bg)',
-                    border: '1px dashed var(--primary)',
-                    borderRadius: 6,
-                  }}>
-                  <MdAdd size={15} /> Add Guest
-                </button>
-                {additionalGuests.fields.length === 0 && (
-                  <p className="f-12-500 text-muted mb-3">
-                    No additional guests added. Click below to add.
-                  </p>
-                )}
-              </>
-            )}
-
-            {/* ── Stay Details ─────────────────────────────────── */}
-            <Section title="Stay Details" />
-
-            <div className="row g-3">
-              {/* Check In date + time */}
-              <div className="col-6">
-                <Field label="Check In *" error={errors.check_in?.message}>
-                  <input
-                    type="date"
-                    className="form-control"
-                    {...register('check_in', { required: 'Required' })}
-                  />
-                </Field>
               </div>
-              <div className="col-6">
-                <Field label="Check In Time">
-                  <input type="time" className="form-control" {...register('check_in_time')} />
-                </Field>
-              </div>
+            </Field>
+          </div>
+          <div className="col-6">
+            <Field label="Father Name">
+              <input className="form-control" {...register('guest_father_name')} />
+            </Field>
+          </div>
+          <div className="col-6">
+            <Field label="NIC / Passport">
+              <input className="form-control" {...register('guest_nic')} />
+            </Field>
+          </div>
+          <div className="col-6">
+            <Field label="Phone *" error={errors.guest_phone?.message}>
+              <input
+                className="form-control"
+                {...register('guest_phone', { required: 'Required' })}
+              />
+            </Field>
+          </div>
+          <div className="col-6">
+            <Field label="Profession">
+              <input className="form-control" {...register('guest_profession')} />
+            </Field>
+          </div>
+          <div className="col-6">
+            <Field label="Purpose">
+              <input className="form-control" {...register('guest_purpose')} />
+            </Field>
+          </div>
+          <div className="col-6">
+            <Field label="City">
+              <input className="form-control" {...register('guest_city')} />
+            </Field>
+          </div>
+          <div className="col-6">
+            <Field label="Country">
+              <input className="form-control" {...register('guest_country')} />
+            </Field>
+          </div>
+          <div className="col-6">
+            <Field label="Address">
+              <textarea rows={1} className="form-control" {...register('guest_address')} />
+            </Field>
+          </div>
+          <div className="col-6">
+            <Field label="Visitor Type">
+              <select className="form-select form-select" {...register('visitor_type')}>
+                {['single', 'family', 'friends', 'clients'].map((t) => (
+                  <option key={t} value={t} className="text-capitalize">
+                    {t}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          </div>
+        </div>
 
-              {/* Check Out date + time */}
-              <div className="col-6">
-                <Field label="Check Out *" error={errors.check_out?.message}>
-                  <input
-                    type="date"
-                    className="form-control"
-                    {...register('check_out', { required: 'Required' })}
-                  />
-                </Field>
-              </div>
-              <div className="col-6">
-                <Field label="Check Out Time">
-                  <input type="time" className="form-control" {...register('check_out_time')} />
-                </Field>
-              </div>
-
-              <div className="col-4">
-                <Field label="Adults">
-                  <input
-                    type="number"
-                    min={1}
-                    className="form-control"
-                    {...register('adults', { valueAsNumber: true, min: 1 })}
-                  />
-                </Field>
-              </div>
-              {visitorType !== 'single' && (
-                <div className="col-4">
-                  <Field label="Children">
-                    <input
-                      type="number"
-                      min={0}
-                      className="form-control"
-                      {...register('children', { valueAsNumber: true, min: 0 })}
-                    />
-                  </Field>
-                </div>
-              )}
-              <div className="col-4">
-                <Field label="Status">
-                  <select className="form-select" {...register('status')}>
-                    {['reserved', 'checked_in', 'checked_out', 'cancelled'].map((s) => (
-                      <option key={s} value={s} className="text-capitalize">
-                        {s.replace('_', ' ')}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
-              </div>
-            </div>
-
-            {/* ── Rooms Dropdown Conversion ────────────────────── */}
-            <Section title="Rooms" />
-
-            {roomsFieldArray.fields.map((field, idx) => (
-              <div key={field.id} className="d-flex align-items-end gap-2 mb-2">
-                <div className="flex-fill">
-                  <Field label={idx === 0 ? 'Room Number' : ''}>
-                    <div className="w-100">
-                      <Dropdown
-                        align="left"
-                        minWidth={240}
-                        trigger={
-                          <div className="form-control d-flex justify-content-between align-items-center cursor-pointer w-100">
-                            <span
-                              className={
-                                watchedSnapshot[idx]?.room_number ? 'text-dark' : 'text-muted'
-                              }>
-                              {watchedSnapshot[idx]?.room_number || 'Select a Room'}
-                            </span>
-                            <MdArrowDropDown size={18} className="text-muted" />
-                          </div>
-                        }>
-                        {(close) => (
-                          <DropdownSection>
-                            {isLoading ? (
-                              <div className="px-3 py-2 f-12-500 text-muted">Loading rooms...</div>
-                            ) : availableRooms.length === 0 ? (
-                              <div className="px-3 py-2 f-12-500 text-muted">
-                                No rooms available
-                              </div>
-                            ) : (
-                              availableRooms.map((roomItem: any) => (
-                                <DropdownItem
-                                  key={roomItem.id}
-                                  active={
-                                    watchedSnapshot[idx]?.room_number === roomItem.room_number
-                                  }
-                                  onClick={() => handleRoomSelection(idx, roomItem, close)}>
-                                  Room {roomItem.room_number} ({roomItem.type || 'Standard'}) — Rs.
-                                  {roomItem.price || roomItem.amount || 0}
-                                </DropdownItem>
-                              ))
-                            )}
-                          </DropdownSection>
-                        )}
-                      </Dropdown>
-                    </div>
-                    {/* Hidden inputs keep values validated cleanly within React Hook Form */}
-                    <input
-                      type="hidden"
-                      {...register(`rooms_snapshot.${idx}.room_number`, {
-                        required: 'Select a room',
-                      })}
-                    />
-                    <input type="hidden" {...register(`rooms.${idx}.room_id`)} />
-                  </Field>
-                </div>
-
-                <div style={{ width: 130 }}>
-                  <Field label={idx === 0 ? 'Price / Night' : ''}>
-                    <input
-                      type="number"
-                      className="form-control"
-                      placeholder="0"
-                      {...register(`rooms_snapshot.${idx}.amount`, {
-                        valueAsNumber: true,
-                        onChange: (e) => {
-                          // Mirror input value modifications directly to the sibling Pivot configuration hook
-                          setValue(`rooms.${idx}.amount`, Number(e.target.value));
-                        },
-                      })}
-                    />
-                  </Field>
-                </div>
-                {roomsFieldArray.fields.length > 1 && (
+        {/* ── Additional Guests ────────────────────────────────── */}
+        {visitorType !== 'single' && (
+          <>
+            <Section title="Additional Guests" />
+            {additionalGuests.fields.map((field, idx) => (
+              <div
+                key={field.id}
+                className="rounded-3 p-3 mb-3"
+                style={{
+                  border: '1px solid var(--border-color)',
+                  background: 'var(--primary-bg)',
+                }}>
+                {/* Guest header */}
+                <div className="d-flex justify-content-between align-items-center mb-3">
+                  <span className="f-12-600" style={{ color: 'var(--text-main)' }}>
+                    Guest #{idx + 1}
+                  </span>
                   <button
                     type="button"
-                    onClick={() => handleRemoveRoomRow(idx)}
-                    className="btn btn-sm mb-3"
+                    onClick={() => additionalGuests.remove(idx)}
+                    className="btn btn-sm d-flex align-items-center gap-1 f-12-500"
                     style={{
                       color: 'var(--danger)',
                       background: '#ffebee',
                       border: 'none',
                       borderRadius: 6,
                     }}>
-                    <MdDelete size={16} />
+                    <MdDelete size={14} /> Remove
                   </button>
-                )}
+                </div>
+
+                <div className="row g-2">
+                  {/* Name */}
+                  <div className="col-6">
+                    <label className="form-label f-12-600" style={{ color: 'var(--text-main)' }}>
+                      Full Name *
+                    </label>
+                    <input
+                      className="form-control form-control-sm"
+                      placeholder="Guest name"
+                      {...register(`additional_guests.${idx}.name`, { required: true })}
+                    />
+                    {errors.additional_guests?.[idx]?.name && (
+                      <div className="text-danger f-12-500 mt-1">Required</div>
+                    )}
+                  </div>
+
+                  {/* Father Name — optional */}
+                  <div className="col-6">
+                    <label className="form-label f-12-600" style={{ color: 'var(--text-main)' }}>
+                      Father Name
+                      <span className="text-muted fw-normal ms-1">(optional)</span>
+                    </label>
+                    <input
+                      className="form-control form-control-sm"
+                      placeholder="Father's name"
+                      {...register(`additional_guests.${idx}.father_name`)}
+                    />
+                  </div>
+                  <div className="col-6">
+                    <label className="form-label f-12-600" style={{ color: 'var(--text-main)' }}>
+                      Gender
+                    </label>
+                    <div className="d-flex gap-3 mt-1">
+                      {['male', 'female'].map((g) => (
+                        <label
+                          key={g}
+                          className="d-flex align-items-center gap-2 f-12-500 text-capitalize"
+                          style={{ cursor: 'pointer', color: 'var(--text-main)' }}>
+                          <input
+                            type="radio"
+                            value={g}
+                            {...register(`additional_guests.${idx}.gender`)}
+                            style={{ accentColor: 'var(--primary)' }}
+                          />
+                          {g}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Relation dropdown */}
+                  <div className="col-6">
+                    <label className="form-label f-12-600" style={{ color: 'var(--text-main)' }}>
+                      Relation *
+                    </label>
+                    <Dropdown
+                      align="left"
+                      minWidth={200}
+                      trigger={
+                        <div
+                          className="form-control form-control-sm d-flex justify-content-between align-items-center"
+                          style={{ cursor: 'pointer' }}>
+                          <span
+                            className={
+                              watch(`additional_guests.${idx}.relation`) ? '' : 'text-muted'
+                            }>
+                            {watch(`additional_guests.${idx}.relation`) || 'Select relation'}
+                          </span>
+                          <MdArrowDropDown size={16} className="text-muted" />
+                        </div>
+                      }>
+                      {(close: () => void) => (
+                        <DropdownSection>
+                          {RELATIONS.map((rel) => (
+                            <DropdownItem
+                              key={rel}
+                              active={watch(`additional_guests.${idx}.relation`) === rel}
+                              onClick={() => {
+                                setValue(`additional_guests.${idx}.relation`, rel);
+                                close();
+                              }}>
+                              {rel}
+                            </DropdownItem>
+                          ))}
+                        </DropdownSection>
+                      )}
+                    </Dropdown>
+                    {/* Hidden input for validation */}
+                    <input
+                      type="hidden"
+                      {...register(`additional_guests.${idx}.relation`, { required: true })}
+                    />
+                    {errors.additional_guests?.[idx]?.relation && (
+                      <div className="text-danger f-12-500 mt-1">Required</div>
+                    )}
+                  </div>
+
+                  {/* NIC — optional */}
+                  <div className="col-6">
+                    <label className="form-label f-12-600" style={{ color: 'var(--text-main)' }}>
+                      NIC / Passport
+                      <span className="text-muted fw-normal ms-1">(optional)</span>
+                    </label>
+                    <input
+                      className="form-control form-control-sm"
+                      placeholder="e.g. 35202-1234567-1"
+                      {...register(`additional_guests.${idx}.nic`)}
+                    />
+                  </div>
+
+                  {/* Phone — optional */}
+                  <div className="col-6">
+                    <label className="form-label f-12-600" style={{ color: 'var(--text-main)' }}>
+                      Phone
+                      <span className="text-muted fw-normal ms-1">(optional)</span>
+                    </label>
+                    <input
+                      className="form-control form-control-sm"
+                      placeholder="e.g. 0300-1234567"
+                      {...register(`additional_guests.${idx}.phone`)}
+                    />
+                  </div>
+                </div>
               </div>
             ))}
+            {/* Add guest button */}
             <button
               type="button"
-              onClick={handleAddRoomRow}
+              onClick={() =>
+                additionalGuests.append({
+                  name: '',
+                  relation: '',
+                  nic: '',
+                  phone: '',
+                  father_name: '',
+                  gender: 'male',
+                })
+              }
               className="btn btn-sm d-flex align-items-center gap-1 f-12-600 mb-2"
               style={{
                 color: 'var(--primary)',
@@ -744,91 +612,277 @@ export default function BookingDrawer({ open, onClose, onSuccess, booking }: Pro
                 border: '1px dashed var(--primary)',
                 borderRadius: 6,
               }}>
-              <MdAdd size={15} /> Add room
+              <MdAdd size={15} /> Add Guest
             </button>
+            {additionalGuests.fields.length === 0 && (
+              <p className="f-12-500 text-muted mb-3">
+                No additional guests added. Click below to add.
+              </p>
+            )}
+          </>
+        )}
 
-            {/* ── Other Charges ─────────────────────────────────── */}
-            <Section title="Other Charges" />
+        {/* ── Stay Details ─────────────────────────────────── */}
+        <Section title="Stay Details" />
 
-            {others.fields.map((field, idx) => (
-              <div key={field.id} className="d-flex align-items-end gap-2 mb-2">
-                <div className="flex-fill">
-                  <Field label={idx === 0 ? 'Description' : ''}>
-                    <input
-                      className="form-control"
-                      placeholder="e.g. Laundry"
-                      {...register(`other_charges.${idx}.name`, { required: true })}
-                    />
-                  </Field>
-                </div>
-                <div style={{ width: 130 }}>
-                  <Field label={idx === 0 ? 'Amount' : ''}>
-                    <input
-                      type="number"
-                      className="form-control"
-                      placeholder="0"
-                      {...register(`other_charges.${idx}.amount`, { valueAsNumber: true })}
-                    />
-                  </Field>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => others.remove(idx)}
-                  className="btn btn-sm mb-3"
-                  style={{
-                    color: 'var(--danger)',
-                    background: '#ffebee',
-                    border: 'none',
-                    borderRadius: 6,
-                  }}>
-                  <MdDelete size={16} />
-                </button>
-              </div>
-            ))}
-            <button
-              type="button"
-              onClick={() => others.append({ name: '', amount: 0 })}
-              className="btn btn-sm d-flex align-items-center gap-1 f-12-600 mb-2"
-              style={{
-                color: 'var(--primary)',
-                background: 'var(--primary-bg)',
-                border: '1px dashed var(--primary)',
-                borderRadius: 6,
-              }}>
-              <MdAdd size={15} /> Add Charge
-            </button>
+        <div className="row g-3">
+          {/* Check In date + time */}
+          <div className="col-6">
+            <Field label="Check In *" error={errors.check_in?.message}>
+              <input
+                type="date"
+                className="form-control"
+                {...register('check_in', { required: 'Required' })}
+              />
+            </Field>
+          </div>
+          <div className="col-6">
+            <Field label="Check In Time">
+              <input type="time" className="form-control" {...register('check_in_time')} />
+            </Field>
+          </div>
 
-            {/* ── Financials ────────────────────────────────────── */}
-            <Section title="Financials" />
+          {/* Check Out date + time */}
+          <div className="col-6">
+            <Field label="Check Out *" error={errors.check_out?.message}>
+              <input
+                type="date"
+                className="form-control"
+                {...register('check_out', { required: 'Required' })}
+              />
+            </Field>
+          </div>
+          <div className="col-6">
+            <Field label="Check Out Time">
+              <input type="time" className="form-control" {...register('check_out_time')} />
+            </Field>
+          </div>
 
-            <div className="row g-3">
-              <div className="col-6">
-                <Field label="Discount (Rs.)">
-                  <input
-                    type="number"
-                    min={0}
-                    className="form-control"
-                    {...register('discount', { valueAsNumber: true })}
-                  />
-                </Field>
-              </div>
-              <div className="col-6">
-                <Field label="Amount Paid (Rs.)">
-                  <input
-                    type="number"
-                    min={0}
-                    className="form-control"
-                    {...register('amount_paid', { valueAsNumber: true })}
-                  />
-                </Field>
-              </div>
-              <div className="col-12">
-                <Field label="Notes">
-                  <textarea className="form-control" rows={3} {...register('notes')} />
-                </Field>
-              </div>
+          <div className="col-4">
+            <Field label="Adults">
+              <input
+                type="number"
+                min={1}
+                className="form-control"
+                {...register('adults', { valueAsNumber: true, min: 1 })}
+              />
+            </Field>
+          </div>
+          {visitorType !== 'single' && (
+            <div className="col-4">
+              <Field label="Children">
+                <input
+                  type="number"
+                  min={0}
+                  className="form-control"
+                  {...register('children', { valueAsNumber: true, min: 0 })}
+                />
+              </Field>
             </div>
-          </form>
-       </Drawer>
+          )}
+          <div className="col-4">
+            <Field label="Status">
+              <select className="form-select" {...register('status')}>
+                {['reserved', 'checked_in', 'checked_out', 'cancelled'].map((s) => (
+                  <option key={s} value={s} className="text-capitalize">
+                    {s.replace('_', ' ')}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          </div>
+        </div>
+
+        {/* ── Rooms Dropdown Conversion ────────────────────── */}
+        <Section title="Rooms" />
+
+        {roomsFieldArray.fields.map((field, idx) => (
+          <div key={field.id} className="d-flex align-items-end gap-2 mb-2">
+            <div className="flex-fill">
+              <Field label={idx === 0 ? 'Room Number' : ''}>
+                <div className="w-100">
+                  <Dropdown
+                    align="left"
+                    minWidth={240}
+                    trigger={
+                      <div className="form-control d-flex justify-content-between align-items-center cursor-pointer w-100">
+                        <span
+                          className={
+                            watchedSnapshot[idx]?.room_number ? 'text-dark' : 'text-muted'
+                          }>
+                          {watchedSnapshot[idx]?.room_number || 'Select a Room'}
+                        </span>
+                        <MdArrowDropDown size={18} className="text-muted" />
+                      </div>
+                    }>
+                    {(close) => (
+                      <DropdownSection>
+                        <div className="px-2">
+                          <input
+                          autoFocus
+                            value={roomQuery}
+                            onChange={(e) => setRoomQuery(e.target.value)}
+                            className="form-control form-control-sm no-outline"
+                            placeholder="Search by room number"
+                          />
+                        </div>
+                        {isLoading ? (
+                          <div className="px-3 py-2 f-12-500 text-muted">Loading rooms...</div>
+                        ) : availableRooms.length === 0 ? (
+                          <div className="px-3 py-2 f-12-500 text-muted">No rooms available</div>
+                        ) : (
+                          availableRooms.map((roomItem: any) => (
+                            <DropdownItem
+                              key={roomItem.id}
+                              active={watchedSnapshot[idx]?.room_number === roomItem.room_number}
+                              onClick={() => handleRoomSelection(idx, roomItem, close)}>
+                              Room {roomItem.room_number} ({roomItem.type || 'Standard'}) — Rs.
+                              {roomItem.price || roomItem.amount || 0}
+                            </DropdownItem>
+                          ))
+                        )}
+                      </DropdownSection>
+                    )}
+                  </Dropdown>
+                </div>
+                {/* Hidden inputs keep values validated cleanly within React Hook Form */}
+                <input
+                  type="hidden"
+                  {...register(`rooms_snapshot.${idx}.room_number`, {
+                    required: 'Select a room',
+                  })}
+                />
+                <input type="hidden" {...register(`rooms.${idx}.room_id`)} />
+              </Field>
+            </div>
+
+            <div style={{ width: 130 }}>
+              <Field label={idx === 0 ? 'Price / Night' : ''}>
+                <input
+                  type="number"
+                  className="form-control"
+                  placeholder="0"
+                  {...register(`rooms_snapshot.${idx}.amount`, {
+                    valueAsNumber: true,
+                    onChange: (e) => {
+                      // Mirror input value modifications directly to the sibling Pivot configuration hook
+                      setValue(`rooms.${idx}.amount`, Number(e.target.value));
+                    },
+                  })}
+                />
+              </Field>
+            </div>
+            {roomsFieldArray.fields.length > 1 && (
+              <button
+                type="button"
+                onClick={() => handleRemoveRoomRow(idx)}
+                className="btn btn-sm mb-3"
+                style={{
+                  color: 'var(--danger)',
+                  background: '#ffebee',
+                  border: 'none',
+                  borderRadius: 6,
+                }}>
+                <MdDelete size={16} />
+              </button>
+            )}
+          </div>
+        ))}
+        <button
+          type="button"
+          onClick={handleAddRoomRow}
+          className="btn btn-sm d-flex align-items-center gap-1 f-12-600 mb-2"
+          style={{
+            color: 'var(--primary)',
+            background: 'var(--primary-bg)',
+            border: '1px dashed var(--primary)',
+            borderRadius: 6,
+          }}>
+          <MdAdd size={15} /> Add room
+        </button>
+
+        {/* ── Other Charges ─────────────────────────────────── */}
+        <Section title="Other Charges" />
+
+        {others.fields.map((field, idx) => (
+          <div key={field.id} className="d-flex align-items-end gap-2 mb-2">
+            <div className="flex-fill">
+              <Field label={idx === 0 ? 'Description' : ''}>
+                <input
+                  className="form-control"
+                  placeholder="e.g. Laundry"
+                  {...register(`other_charges.${idx}.name`, { required: true })}
+                />
+              </Field>
+            </div>
+            <div style={{ width: 130 }}>
+              <Field label={idx === 0 ? 'Amount' : ''}>
+                <input
+                  type="number"
+                  className="form-control"
+                  placeholder="0"
+                  {...register(`other_charges.${idx}.amount`, { valueAsNumber: true })}
+                />
+              </Field>
+            </div>
+            <button
+              type="button"
+              onClick={() => others.remove(idx)}
+              className="btn btn-sm mb-3"
+              style={{
+                color: 'var(--danger)',
+                background: '#ffebee',
+                border: 'none',
+                borderRadius: 6,
+              }}>
+              <MdDelete size={16} />
+            </button>
+          </div>
+        ))}
+        <button
+          type="button"
+          onClick={() => others.append({ name: '', amount: 0 })}
+          className="btn btn-sm d-flex align-items-center gap-1 f-12-600 mb-2"
+          style={{
+            color: 'var(--primary)',
+            background: 'var(--primary-bg)',
+            border: '1px dashed var(--primary)',
+            borderRadius: 6,
+          }}>
+          <MdAdd size={15} /> Add Charge
+        </button>
+
+        {/* ── Financials ────────────────────────────────────── */}
+        <Section title="Financials" />
+
+        <div className="row g-3">
+          <div className="col-6">
+            <Field label="Discount (Rs.)">
+              <input
+                type="number"
+                min={0}
+                className="form-control"
+                {...register('discount', { valueAsNumber: true })}
+              />
+            </Field>
+          </div>
+          <div className="col-6">
+            <Field label="Amount Paid (Rs.)">
+              <input
+                type="number"
+                min={0}
+                className="form-control"
+                {...register('amount_paid', { valueAsNumber: true })}
+              />
+            </Field>
+          </div>
+          <div className="col-12">
+            <Field label="Notes">
+              <textarea className="form-control" rows={3} {...register('notes')} />
+            </Field>
+          </div>
+        </div>
+      </form>
+    </Drawer>
   );
 }

@@ -115,3 +115,11 @@
 ::-webkit-scrollbar-thumb:hover {
     background: var(--primary-light);
 }
+
+.no-outline {
+    outline: none !important;
+    &:focus {
+        outline: none !important;
+        box-shadow: none !important;
+    }
+}

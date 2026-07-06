@@ -21,6 +21,7 @@ import moment from 'moment';
 interface Booking {
   id: number;
   guest_name: string;
+  guest_gender:string;
   guest_father_name: string;
   guest_nic: string;
   guest_phone: string;
@@ -161,6 +162,10 @@ export default function BookingsPage() {
                       <div className="d-flex justify-content-between gap-3">
                         <span className="fw-bold text-secondary">Relation:</span>
                         <span className="text-dark">{guest.relation || '--'}</span>
+                      </div>
+                      <div className="d-flex justify-content-between gap-3">
+                        <span className="fw-bold text-secondary">Gender:</span>
+                        <span className="text-dark">{guest.gender || '--'}</span>
                       </div>
                       <div className="d-flex justify-content-between gap-3">
                         <span className="fw-bold text-secondary">Phone:</span>

@@ -10,6 +10,7 @@ import { DateRange, useDashboardStats } from '@/hooks/useDashboardStats';
 import DateRangeFilter from './DateRangeFilter';
 import { GetPays } from '@/server/apis/bookings';
 import { GetExpensesStats } from '@/server/apis/expenses';
+import Link from 'next/link';
 
 export default function OverView() {
   const [range, setRange] = useState<DateRange>({
@@ -66,29 +67,35 @@ export default function OverView() {
           gap: 16,
           marginBottom: 16,
         }}>
-        <StatCard
-          title="Total Revenue"
-          loading={isLoading}
-          value={data?.total_revenue??0}
-          subtitle="Payments received in period"
-          icon={<MdAttachMoney size={24} />}
-          trend="up"
-          color="var(--primary)"
+        <Link href="/bookings" style={{ textDecoration: 'none' }}>
+          <StatCard
+            title="Total Revenue"
+            loading={isLoading}
+            value={data?.total_revenue ?? 0}
+            subtitle="Payments received in period"
+            icon={<MdAttachMoney size={24} />}
+            trend="up"
+            color="var(--primary)"
+          />
+        </Link>
+        <Link href="/expenses" style={{ textDecoration: 'none' }}>
+          <StatCard
+            loading={expensesLoading}
+            title="Total Expenses"
+            value={expenses?.total_expenses ?? 0}
+            subtitle="Expenses in period"
+            icon={<MdReceipt size={24} />}
+            trend="down"
+            color="var(--danger)"
+          />
+        </Link>
+        <ProfitSummary
+          totalRevenue={data?.total_revenue || 0}
+          totalExpenses={expenses?.total_expenses || 0}
         />
-        <StatCard
-          loading={expensesLoading}
-          title="Total Expenses"
-         value={expenses?.total_expenses??0}
-          subtitle="Expenses in period"
-          icon={<MdReceipt size={24} />}
-          trend="down"
-          color="var(--danger)"
-        />
-       <ProfitSummary totalRevenue={data?.total_revenue||0} totalExpenses={expenses?.total_expenses||0} />
       </div>
 
       {/* Profit summary */}
-      
     </div>
   );
 }
